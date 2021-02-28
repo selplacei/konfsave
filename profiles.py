@@ -1,4 +1,5 @@
 import sys
+import os
 import shutil
 import json
 from pathlib import Path
@@ -7,54 +8,92 @@ from typing import Optional, Set
 import config
 
 
-def paths_to_save(name=None, include=None, exclude=None, default_include=None) -> Set[str]:
+def paths_to_save(name, include=None, exclude=None, default_include=None) -> Set[str]:
 	default_include = default_include or config.PATHS_TO_SAVE
-	include = set(include)
-	exclude = set(exclude)
-	if name is None:
-		info = profile_info()
-		if info is None:
-			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
-		name = info['name']
-	else:
-		info = profile_info(config.KONFSAVE_DATA_PATH / name / 'info.json')
+	include = set(include or ())
+	exclude = set(exclude or ())
+	info = profile_info(config.KONFSAVE_PROFILE_HOME / name / 'info.json') or {'exclude': set(), 'include': set()}
 	exclude = (exclude | info['exclude']) - include
 	include = include | info['include'] - exclude
 	return (default_include | include) - exclude
 
 
-def save(name=None, include=None, exclude=None, follow_symlinks=True):
+def save(name=None, include=None, exclude=None, follow_symlinks=False):
 	"""
 	If ``name`` is unspecified, the current configuration is saved.
 	If ``name`` is unspecified and any of the other arguments are not empty, they are combined
 	with the data stored in the current profile, with priority given to the argument.
 	"""
-	profile_dir = config.KONFSAVE_DATA_PATH / name
-	profile_dir.mkdir(parents=True)
-	files_to_save = []
-	for path in paths_to_save(name, include, exclude):
-		files_to_save += Path(path).glob('**')
-	for path in files_to_save:
+	if name is None:
+		info = profile_info()
+		if info is None:
+			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
+		name = info['name']
+	profile_dir = config.KONFSAVE_PROFILE_HOME / name
+	profile_dir.mkdir(parents=True, exist_ok=True)
+	for path in map(Path, paths_to_save(name, include, exclude)):
 		print(f'Copying {path}')
 		if not path.exists():
-			sys.stderr.write(f'Error: this path doesn\'t exist. Skipping')
+			sys.stderr.write(f'Error: this path doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
-			sys.stderr.write(f'Error: this path is not within the user\'s home directory. Skipping')
+			sys.stderr.write(f'Error: this path is not within the user\'s home directory. Skipping\n')
 		else:
-			shutil.copy(Path.home() / path, profile_dir / path, follow_symlinks=follow_symlinks)
+			destination = profile_dir / (os.path.relpath(path, Path.home()))
+			destination.parent.mkdir(parents=True, exist_ok=True)
+			if path.is_dir():
+				shutil.copytree(
+					src=path,
+					dst=destination,
+					symlinks=follow_symlinks,
+					copy_function=shutil.copy,
+					dirs_exist_ok=True
+				)
+			else:
+				shutil.copy(path, destination, follow_symlinks=follow_symlinks)
 	# TODO: implement git repos in profiles
+	new_info = {
+		'name': name,
+		'hash': 'TODO',
+		'include': include,
+		'exclude': exclude
+	}
+	with open(profile_dir / 'info.json', 'w+') as f:
+		json.dump(new_info, f)
 
 
 def load(name, overwrite_unsaved_configuration=False):
 	"""
-	The KDE configuration stored in ``homedir`` will be overwritten if:
+	The KDE configuration will be overwritten if:
 		* ``overwrite_unsaved_configuration`` is True
 			OR all of the following is true:
 		* There is a ``current_profile`` file in ``{KONFSAVE_DATA_PATH}``
 		* A profile with the same name is saved
 		* The two profiles' latest Git commits have the same hash
 	"""
-	...
+	profile_root = config.KONFSAVE_PROFILE_HOME / name
+	if overwrite_unsaved_configuration is not True:  # Be really sure that overwriting is intentional
+		# If the checks below fail, exit the function.
+		try:
+			current_info = profile_info()
+			source_info = profile_info(profile_root / 'info.json')
+			assert current_info is not None
+			assert source_info is not None
+			assert current_info['name'] == source_info['name']
+			assert current_info['hash'] == source_info['hash']
+		except Exception as e:
+			sys.stderr.write(f'Refusing to overwrite unsaved configuration')
+			raise
+			return
+	config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
+	shutil.copytree(
+		src=profile_root,
+		dst=Path.home() / 'test_konfsave',
+		symlinks=True,
+		copy_function=shutil.copy,
+		dirs_exist_ok=True,
+		ignore=lambda d, _: ['info.json'] if profile_root == d else ()
+	)
+	shutil.copyfile(profile_root / 'info.json', config.KONFSAVE_CURRENT_PROFILE_PATH)
 
 
 def profile_info(profile_info_file_path=None) -> Optional[dict]:
@@ -67,12 +106,12 @@ def profile_info(profile_info_file_path=None) -> Optional[dict]:
 		with open(path) as f:
 			info = json.load(f)
 			assert info['name']							# Must not be empty
-			assert info['latest_commit_hash']			# Must not be empty
-			assert isinstance(info['include'], list)	# May be an empty list
-			assert isinstance(info['exclude'], list)	# May be an empty list
+			assert info['hash']							# Must not be empty
+			info['include'] = info['include'] or []
+			info['exclude'] = info['exclude'] or []
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {path};\n{str(e)}')
+		sys.stderr.write(f'Warning: malformed profile info at {path};\n{str(e)}\n')
 		return None
 	except FileNotFoundError:
 		# The current configuration is not saved. Consider this normal behavior.
