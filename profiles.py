@@ -1,12 +1,13 @@
 import sys
+import shutil
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Set
 
 import config
 
 
-def paths_to_save(name=None, default_include=None, include=None, exclude=None) -> set:
+def paths_to_save(name=None, include=None, exclude=None, default_include=None) -> Set[str]:
 	default_include = default_include or config.PATHS_TO_SAVE
 	include = set(include)
 	exclude = set(exclude)
@@ -22,12 +23,26 @@ def paths_to_save(name=None, default_include=None, include=None, exclude=None) -
 	return (default_include | include) - exclude
 
 
-def save(name=None, include=None, exclude=None):
+def save(name=None, include=None, exclude=None, follow_symlinks=True):
 	"""
 	If ``name`` is unspecified, the current configuration is saved.
 	If ``name`` is unspecified and any of the other arguments are not empty, they are combined
 	with the data stored in the current profile, with priority given to the argument.
 	"""
+	profile_dir = config.KONFSAVE_DATA_PATH / name
+	profile_dir.mkdir(parents=True)
+	files_to_save = []
+	for path in paths_to_save(name, include, exclude):
+		files_to_save += Path(path).glob('**')
+	for path in files_to_save:
+		print(f'Copying {path}')
+		if not path.exists():
+			sys.stderr.write(f'Error: this path doesn\'t exist. Skipping')
+		elif not path.is_relative_to(Path.home()):
+			sys.stderr.write(f'Error: this path is not within the user\'s home directory. Skipping')
+		else:
+			shutil.copy(Path.home() / path, profile_dir / path, follow_symlinks=follow_symlinks)
+	# TODO: implement git repos in profiles
 
 
 def load(name, overwrite_unsaved_configuration=False):
