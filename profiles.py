@@ -8,6 +8,21 @@ from typing import Optional, Set
 import config
 
 
+def copy_path(source, destination, overwrite=True, follow_symlinks=False):
+	destination.parent.mkdir(parents=True, exist_ok=True)
+	if source.is_dir():
+		shutil.copytree(
+			src=source,
+			dst=destination,
+			symlinks=follow_symlinks,
+			copy_function=shutil.copy,
+			dirs_exist_ok=overwrite
+		)
+	else:
+		if overwrite or not destination.exists():
+			shutil.copy(source, destination, follow_symlinks=follow_symlinks)
+
+
 def paths_to_save(name, include=None, exclude=None, default_include=None) -> Set[str]:
 	default_include = default_include or config.PATHS_TO_SAVE
 	include = set(include or ())
@@ -34,22 +49,12 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False):
 	for path in map(Path, paths_to_save(name, include, exclude)):
 		print(f'Copying {path}')
 		if not path.exists():
-			sys.stderr.write(f'Error: this path doesn\'t exist. Skipping\n')
+			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
-			sys.stderr.write(f'Error: this path is not within the user\'s home directory. Skipping\n')
+			sys.stderr.write(f'Warning: this path is not within the user\'s home directory. Skipping\n')
 		else:
-			destination = profile_dir / (os.path.relpath(path, Path.home()))
-			destination.parent.mkdir(parents=True, exist_ok=True)
-			if path.is_dir():
-				shutil.copytree(
-					src=path,
-					dst=destination,
-					symlinks=follow_symlinks,
-					copy_function=shutil.copy,
-					dirs_exist_ok=True
-				)
-			else:
-				shutil.copy(path, destination, follow_symlinks=follow_symlinks)
+			destination = profile_dir / path.relative_to(Path.home())
+			copy_path(path, destination, follow_symlinks=follow_symlinks)
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
@@ -61,7 +66,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False):
 		json.dump(new_info, f)
 
 
-def load(name, overwrite_unsaved_configuration=False):
+def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False):
 	"""
 	The KDE configuration will be overwritten if:
 		* ``overwrite_unsaved_configuration`` is True
@@ -83,16 +88,14 @@ def load(name, overwrite_unsaved_configuration=False):
 		except Exception as e:
 			sys.stderr.write(f'Refusing to overwrite unsaved configuration')
 			raise
-			return
 	config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
-	shutil.copytree(
-		src=profile_root,
-		dst=Path.home() / 'test_konfsave',
-		symlinks=True,
-		copy_function=shutil.copy,
-		dirs_exist_ok=True,
-		ignore=lambda d, _: ['info.json'] if profile_root == d else ()
-	)
+	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
+		print(f'Copying {path}')
+		source = profile_root / path
+		if source.exists():
+			copy_path(source, Path.home() / path)
+		else:
+			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
 	shutil.copyfile(profile_root / 'info.json', config.KONFSAVE_CURRENT_PROFILE_PATH)
 
 
@@ -107,8 +110,8 @@ def profile_info(profile_info_file_path=None) -> Optional[dict]:
 			info = json.load(f)
 			assert info['name']							# Must not be empty
 			assert info['hash']							# Must not be empty
-			info['include'] = info['include'] or []
-			info['exclude'] = info['exclude'] or []
+			info['include'] = set(info['include'] or ())
+			info['exclude'] = set(info['exclude'] or ())
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
 		sys.stderr.write(f'Warning: malformed profile info at {path};\n{str(e)}\n')
