@@ -1,5 +1,4 @@
 import sys
-import path
 
 import config
 import arguments
