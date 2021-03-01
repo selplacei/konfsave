@@ -59,9 +59,9 @@ def action_info(argv):
 			print(f'Name: {info["name"]}')
 			print(f'Stored at: {config.KONFSAVE_PROFILE_HOME / profile}')
 			if include := info['include']:
-				print(f'Files to additionally include: \n  {_N_T.join(include)}')
+				print(f'Files to additionally include: \n  {_N_T.join(map(str, include))}')
 			if exclude := info['exclude']:
-				print(f'Files to exclude by default: \n  {_N_T.join(exclude)}')
+				print(f'Files to exclude by default: \n  {_N_T.join(map(str, exclude))}')
 	else:
 		if current_profile := profiles.current_profile():
 			print(f'Current profile: {current_profile}')
@@ -115,14 +115,14 @@ def action_save(argv):
 	)
 	parser.add_argument(
 		'--include', action='extend', nargs='*', metavar='FILE', default=[],
-		help='Files to add to the profile. Paths must be either absolute or relative to the home directory.\n'
+		help='Files to add to the profile. Paths must be either absolute or relative to the home directory. '
 		'In either case, the actual file must be inside of the home directory.\n'
 		'Files specified here will be included even if the profile excludes them by default.'
 	)
 	parser.add_argument(
 		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files to exclude from the profile; that is, they will not be copied,\n'
-		'but if they already exist in the profile, they will not be deleted. Path format is the same as for --include.\n'
+		'but if they already exist in the profile, they will not be deleted. Path format is the same as for --include. '
 		'Files specified here will be excluded even if the profile includes them by default.'
 	)
 	args = parser.parse_args(argv)
@@ -156,7 +156,7 @@ def action_load(argv):
 	)
 	parser.add_argument(
 		'--overwrite',
-		help='By default, loading will fail if no profile is active (i.e. the current configuration is not saved).\n'
+		help='By default, loading will fail if no profile is active (i.e. the current configuration is not saved). '
 		'Otherwise, the user will be asked for confirmation. Using --overwrite will bypass both of these checks.'
 	)
 	parser.add_argument(
@@ -165,13 +165,13 @@ def action_load(argv):
 	)
 	parser.add_argument(
 		'--include', action='extend', nargs='*', metavar='FILE', default=[],
-		help='Files to load from the profile in addition to those loaded by default.\n'
-		'Paths must point to their final destination and be either absolute or relative to the home directory.\n'
+		help='Files to load from the profile in addition to those loaded by default. '
+		'Paths must point to their final destination and be either absolute or relative to the home directory. '
 		'Files that are loaded by default can be checked using `konfsave list <profile>`.'
 	)
 	parser.add_argument(
 		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
-		help='Files to not load from the profile. This overrides values specified by the profile\'s configuration.\n'
+		help='Files to not load from the profile. This overrides values specified by the profile\'s configuration. '
 		'Path format is the same as for --include.'
 	)
 	args = parser.parse_args(argv)
@@ -201,15 +201,26 @@ def action_load(argv):
 	
 	
 def action_change(argv):
-	parser = argparse.ArgumentParser(prog='konfsave change')
+	parser = argparse.ArgumentParser(
+		prog='konfsave change',
+		epilog='Paths must be specified relative to the home directory.'
+	)
 	parser.add_argument(
 		'profile', nargs='?',
-		help='Profile to change. If not specified, the current profile will be used. Note that this will'
-		'change the profile\'s saved attributes as well; if you\'d like to store new attributes as a'
-		'separate profile, save the configuration under a new name first.'
+		help='Profile to change. If not specified, the current profile will be used. '
+		'Note that this will change the profile\'s saved attributes as well; '
+		'if you\'d like to store new attributes as a separate profile, save the configuration under a new name first.'
 	)
 	parser.add_argument(
 		'--name', help='New name for the profile.'
+	)
+	parser.add_argument(
+		'--include', action='extend', nargs='*', metavar='FILE', default=[],
+		help='New set of files to save to this profile in addition to those saved by default.'
+	)
+	parser.add_argument(
+		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
+		help='New set of files to NOT save to this profile even if they\'re saved by default.'
 	)
 	args = parser.parse_args(argv)
 	results = {k: v for k, v in vars(args).items() if k != 'profile' and v}
@@ -223,7 +234,7 @@ def action_change(argv):
 def action_delete(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave delete',
-		description='Delete a profile. Current system configuration will be unchanged;'
+		description='Delete a profile. Current system configuration will be unchanged; '
 		'however, if the deleted profile is active, there will no longer be an active profile.'
 	)
 	parser.add_argument(

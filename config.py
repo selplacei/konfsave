@@ -21,7 +21,6 @@ _XDG_CONFIG_PATHS_TO_SAVE = {
 	'gtk-3.0',
 	'Kvantum',
 	
-	'konfsave/config.py',
 	'dolphinrc',
 	'konsolerc',
 	'kcminputrc',
