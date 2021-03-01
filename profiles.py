@@ -31,26 +31,34 @@ def current_profile():
 		return None
 
 
-def paths_to_save(name, include=None, exclude=None, default_include=None) -> Set[str]:
-	default_include = default_include or config.PATHS_TO_SAVE
+def paths_to_save(name=None, include=None, exclude=None, default_include=None) -> Set[Path]:
+	"""
+	``include`` and ``exclude`` must be given as paths relative to the home directory
+	``default_include`` must be given as absolute paths
+	Paths are returned as absolute and resolved
+	If ``name`` is not specified, the current profile will be used if one is active;
+	if there is no active profile, the default list from config.py is used
+	"""
+	name = name or current_profile()
+	default_include = set(map(lambda p: Path(p).resolve(), default_include or config.PATHS_TO_SAVE))
 	include = set(include or ())
 	exclude = set(exclude or ())
-	info = profile_info(config.KONFSAVE_PROFILE_HOME / name / 'info.json') or {'exclude': set(), 'include': set()}
+	info = profile_info(name) or {'exclude': set(), 'include': set()}
 	exclude = (exclude | info['exclude']) - include
 	include = include | info['include'] - exclude
+	include = set(map(lambda p: (Path.home() / p).resolve(), include))
+	exclude = set(map(lambda p: (Path.home() / p).resolve(), exclude))
 	return (default_include | include) - exclude
 
 
 def save(name=None, include=None, exclude=None, follow_symlinks=False):
 	"""
 	If ``name`` is unspecified, the current configuration is saved.
-	If ``name`` is unspecified and any of the other arguments are not empty, they are combined
-	with the data stored in the current profile, with priority given to the argument.
 	"""
-	if name is None:
-		info = profile_info()
-		if info is None:
-			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
+	info = profile_info(name)
+	if info is None:
+		raise RuntimeError('Attempted to save the current profile, but no profile is active.')
+	if not name:
 		name = info['name']
 	profile_dir = config.KONFSAVE_PROFILE_HOME / name
 	profile_dir.mkdir(parents=True, exist_ok=True)
@@ -66,11 +74,10 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False):
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
-		'hash': 'TODO',
-		'include': include,
-		'exclude': exclude
+		'include': info['include'],
+		'exclude': info['exclude']
 	}
-	with open(profile_dir / 'info.json', 'w+') as f:
+	with open(profile_dir / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
 		json.dump(new_info, f)
 
 
@@ -88,23 +95,26 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		# If the checks below fail, exit the function.
 		try:
 			current_info = profile_info()
-			source_info = profile_info(profile_root / 'info.json')
 			assert current_info is not None
+			source_info = profile_info(name)
 			assert source_info is not None
-			assert current_info['name'] == source_info['name']
-			assert current_info['hash'] == source_info['hash']
+			if current_info['name'] != source_info['name']:
+				print('Warning: you\'re loading a new profile. Konfsave cannot check if every existing file has been saved.')
+				if input('Are you sure you want to overwrite the current configuration? [y/N]: ').lower() != 'y':
+					print('Loading aborted.')
+					return
 		except Exception as e:
-			sys.stderr.write(f'Refusing to overwrite unsaved configuration')
+			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
 			raise
 	config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
-		print(f'Copying {path}')
+		(f'Copying {path}')
 		source = profile_root / path
 		if source.exists():
 			copy_path(source, Path.home() / path)
 		else:
-			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
-	shutil.copyfile(profile_root / 'info.json', config.KONFSAVE_CURRENT_PROFILE_PATH)
+			sys.stderr.write(f'Warning: the file {source} doesn\'t exist. Skipping\n')
+	shutil.copyfile(profile_root / config.KONFSAVE_PROFILE_INFO_FILENAME, config.KONFSAVE_CURRENT_PROFILE_PATH)
 
 
 def profile_info(profile_name=None) -> Optional[dict]:
@@ -112,23 +122,24 @@ def profile_info(profile_name=None) -> Optional[dict]:
 	When no argument is supplied, this will read ``config.KONFSAVE_CURRENT_PROFILE_PATH``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
-	profile_name = profile_name or current_profile()
-	return parse_profile_info(config.KONFSAVE_PROFILE_HOME / profile_name / config.KONFSAVE_PROFILE_INFO_FILENAME)
+	try:
+		return parse_profile_info(
+			(config.KONFSAVE_PROFILE_HOME / profile_name / config.KONFSAVE_PROFILE_INFO_FILENAME) \
+				if profile_name else config.KONFSAVE_CURRENT_PROFILE_PATH
+		)
+	except FileNotFoundError:
+		return None
 
 
 def parse_profile_info(profile_info_file_path) -> Optional[dict]:
 	try:
-		with open(path) as f:
+		with open(profile_info_file_path) as f:
 			info = json.load(f)
-			assert info['name']							# Must not be empty
-			assert info['hash']							# Must not be empty
+			assert info['name'].isidentifier()
 			info['include'] = set(info['include'] or ())
 			info['exclude'] = set(info['exclude'] or ())
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {path};\n{str(e)}\n')
-		return None
-	except FileNotFoundError:
-		# The current configuration is not saved. Consider this normal behavior.
+		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path};\n{str(e)}\n')
 		return None
 	

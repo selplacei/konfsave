@@ -1,8 +1,8 @@
 import sys
 
 import config
-import arguments
+import actions
 
 
 if __name__ == '__main__':
-	arguments.parse_arguments(sys.argv)
+	actions.parse_arguments(sys.argv)
