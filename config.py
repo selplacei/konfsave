@@ -38,7 +38,7 @@ _XDG_CONFIG_PATHS_TO_SAVE = {
 	'gtkrc-2.0'
 }
 
-PATHS_TO_SAVE = set(map(lambda p: Path.home() / p), {
+PATHS_TO_SAVE = set(map(lambda p: Path.home() / p, {
 	# These paths are relative to the home directory.
 	'.kde4'
 })) | set(map(lambda p: CONFIG_HOME / p, _XDG_CONFIG_PATHS_TO_SAVE))

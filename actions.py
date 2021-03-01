@@ -1,5 +1,6 @@
 import sys
 import argparse
+from pathlib import Path
 from typing import List
 
 import config
@@ -21,7 +22,8 @@ s[ave] [profile]                   Save the current configuration.
                                    If this option is given, the contents of symlinked files are copied instead.
     --include <files ...>          In addition to files included by default, include these files.
     --exclude <files ...>          If any of the given files would be included otherwise, exclude them.
-                                   File paths for --include and --exclude must be relative to the home directory or absolute.
+                                   File paths for --include and --exclude must be inside the home directoy,
+                                   and may be specified as relative to the home directory or absolute.
                                    Each profile can also specify its own list of additional files to include or exclude.
                                    These lists can be changed with `set-include` or `set-exclude`, respectively.
                                    The --include and --exclude flags will override such lists wherever conflicts occur.
@@ -37,6 +39,15 @@ set-exclude [profile] <files ...>  Set a profile-specific list of files to exclu
 
 For `save`, `set-include`, and `set-exclude`, specifying the profile is optional only if a profile is currently active.
 '''
+def validate_profile_name(name, exit_if_invalid=True) -> bool:
+	valid = name.isidentifier()
+	if not valid:
+		sys.stderr.write(f'The profile name "{name}" is invalid.\n')
+		if exit_if_invalid:
+			sys.exit(1)
+	return valid
+
+
 def parse_arguments(argv):
 	# Actions need to parsed separately because each action has its own
 	# argument format, so different ArgumentParser objects have to be used.
@@ -59,9 +70,13 @@ def parse_arguments(argv):
 
 def action_info(argv):
 	parser = argparse.ArgumentParser(prog='konfsave info', add_help=False)
-	parser.add_argument('profile', nargs='?')
+	parser.add_argument(
+		'profile', nargs='?', metavar='profile_name',
+		help='If provided, prints detailed information about the profile.'
+	)
 	args = parser.parse_args(argv)
 	if profile := args.profile:
+		validate_profile_name(profile)
 		info = profiles.profile_info(profile)
 		if info is None:
 			print(f'The profile {profile} doesn\'t exist.')
@@ -88,14 +103,32 @@ def action_info(argv):
 	
 	
 def action_list_files(argv):
-	parser = argparse.ArgumentParser(prog='konfsave info', add_help=False)
-	parser.add_argument('profile', nargs='?', default=profiles.current_profile())
+	parser = argparse.ArgumentParser(
+		prog='konfsave list', add_help=True,
+		description='Print a list of files that would be saved by \'konfsave save\'.'
+	)
+	parser.add_argument(
+		'profile', nargs='?', default=profiles.current_profile(), metavar='profile_name',
+		help='If provided, lists files that would be saved to a specific profile (according to its configuration).'
+	)
 	args = parser.parse_args(argv)
-	print('\n'.join(sorted(map(str, profiles.paths_to_save(args.profile)), key=str.lower)))
-	
-	
+	if args.profile:
+		validate_profile_name(args.profile)
+	try:
+		print('\n'.join(sorted(map(str, profiles.paths_to_save(args.profile)), key=str.lower)))
+	except ValueError as e:
+		print(str(e))
+
+
 def action_save(argv):
-	...
+	parser = argparse.ArgumentParser(prog='konfsave save', add_help=True)
+	parser.add_argument('--profile', metavar='NAME')
+	parser.add_argument('--destination', metavar='DEST', type=Path)
+	parser.add_argument('--follow-symlinks', action='store_true', dest='follow_symlinks')
+	parser.add_argument('--include', action='extend', nargs='*', metavar='FILE', type=Path)
+	parser.add_argument('--exclude', action='extend', nargs='*', metavar='FILE', type=Path)
+	args = parser.parse_args(argv)
+	
 	
 	
 def action_load(argv):

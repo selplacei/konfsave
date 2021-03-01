@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional, Set
 
 import config
-
+# TODO: write proper docstrings so that this can be used as a library
 
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 	destination.parent.mkdir(parents=True, exist_ok=True)
@@ -33,27 +33,29 @@ def current_profile():
 
 def paths_to_save(name=None, include=None, exclude=None, default_include=None) -> Set[Path]:
 	"""
-	``include`` and ``exclude`` must be given as paths relative to the home directory
-	``default_include`` must be given as absolute paths
+	``include``, ``exclude``, and ``default_include`` must be given as absolute paths
 	Paths are returned as absolute and resolved
 	If ``name`` is not specified, the current profile will be used if one is active;
-	if there is no active profile, the default list from config.py is used
+	otherwise, the default list from config.py is used
 	"""
-	name = name or current_profile()
 	default_include = set(map(lambda p: Path(p).resolve(), default_include or config.PATHS_TO_SAVE))
-	include = set(include or ())
-	exclude = set(exclude or ())
-	info = profile_info(name) or {'exclude': set(), 'include': set()}
-	exclude = (exclude | info['exclude']) - include
-	include = include | info['include'] - exclude
-	include = set(map(lambda p: (Path.home() / p).resolve(), include))
-	exclude = set(map(lambda p: (Path.home() / p).resolve(), exclude))
+	include = set(map(lambda p: Path(p).resolve(), include or ()))
+	exclude = set(map(lambda p: Path(p).resolve(), exclude or ()))
+	if not name:
+		info = profile_info() or {'exclude': set(), 'include': set()}
+	else:
+		info = profile_info(name)
+		if info is None:
+			raise ValueError(f'The profile "{name}" doesn\'t exist.')
+	exclude = (exclude | set(map(lambda p: (Path.home() / p).resolve(), info['exclude']))) - include
+	include = (include | set(map(lambda p: (Path.home() / p).resolve(), info['include']))) - exclude
 	return (default_include | include) - exclude
 
 
 def save(name=None, include=None, exclude=None, follow_symlinks=False):
 	"""
 	If ``name`` is unspecified, the current configuration is saved.
+	``include`` and ``exclude`` must be given in the same format as to ``paths_to_save()``.
 	"""
 	info = profile_info(name)
 	if info is None:
