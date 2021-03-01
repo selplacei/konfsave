@@ -1,5 +1,6 @@
 import sys
 import argparse
+import subprocess
 from pathlib import Path
 from typing import List
 
@@ -42,16 +43,14 @@ def parse_arguments(argv):
 			('i', 'info'): action_info,
 			('list', 'list-files'): action_list_files,
 			('s', 'save'): action_save,
-			('load'): action_load,
-			('r', 'rename'): action_rename,
-			('set-include', 'set-exclude'): action_set_files
+			('load'): action_load
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
 	
 
 def action_info(argv):
-	parser = argparse.ArgumentParser(prog='konfsave info', add_help=False)
+	parser = argparse.ArgumentParser(prog='konfsave info')
 	parser.add_argument(
 		'profile', nargs='?', metavar='profile_name',
 		help='If provided, prints detailed information about the profile.'
@@ -86,7 +85,7 @@ def action_info(argv):
 	
 def action_list_files(argv):
 	parser = argparse.ArgumentParser(
-		prog='konfsave list', add_help=True,
+		prog='konfsave list',
 		description='Print a list of files that would be saved by \'konfsave save\'.'
 	)
 	parser.add_argument(
@@ -104,8 +103,8 @@ def action_list_files(argv):
 
 def action_save(argv):
 	parser = argparse.ArgumentParser(
-		prog='konfsave save', add_help=True,
-		# The default usage string has "[profile]" at the end, for some reason.
+		prog='konfsave save',
+		# The default usage string has "[name]" at the end, for some reason.
 		usage='konfsave save [-h] [name] [--destination DEST] [--follow-symlinks] [--include [FILE ...]] [--exclude [FILE ...]]'
 	)
 	parser.add_argument(
@@ -121,35 +120,27 @@ def action_save(argv):
 		help='By default, symlinks are copied as symlinks. If this flag is used, the contents of symlinked files will be copied.'
 	)
 	parser.add_argument(
-		'--include', action='extend', nargs='*', metavar='FILE', type=Path, default=[],
+		'--include', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files to add to the profile. Paths must be either absolute or relative to the home directory.\n'
 		'In either case, the actual file must be inside of the home directory.\n'
 		'Files specified here will be included even if the profile excludes them by default.'
 	)
 	parser.add_argument(
-		'--exclude', action='extend', nargs='*', metavar='FILE', type=Path, default=[],
+		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files to exclude from the profile; that is, they will not be copied,\n'
 		'but if they already exist in the profile, they will not be deleted. Path format is the same as for --include.\n'
 		'Files specified here will be excluded even if the profile includes them by default.'
 	)
 	args = parser.parse_args(argv)
-	info = profiles.profile_info(args.profile)
-	if info:
-		include = info['include']
-		exclude = info['exclude']
-	else:
-		include = set()
-		exclude = set()
-	for path in args.exclude:
+	include = set()
+	exclude = set()
+	for path in map(Path, args.exclude):
 		if not path.is_absolute():
 			path = Path.home() / path
-		include.discard(path)
 		exclude.add(path)
-	for path in args.include:
+	for path in map(Path, args.include):
 		if not path.is_absolute():
 			path = Path.home() / path
-		if path not in args.exclude:
-			exclude.discard(path)
 		include.add(path)
 	profiles.save(
 		name=args.profile,
@@ -161,12 +152,45 @@ def action_save(argv):
 	
 	
 def action_load(argv):
-	...
-	
-	
-def action_rename(argv):
-	...
-	
-	
-def action_set_files(argv):
-	...
+	parser = argparse.ArgumentParser(prog='konfsave load')
+	parser.add_argument(
+		'profile',
+		help='The name of the profile to load.'
+	)
+	parser.add_argument(
+		'--overwrite',
+		help='By default, loading will fail if no profile is active (i.e. the current configuration is not saved).\n'
+		'Otherwise, the user will be asked for confirmation. Using --overwrite will bypass both of these checks.'
+	)
+	parser.add_argument(
+		'--no-restart',
+		help='After loading a profile, the Plasma shell is restarted, unless this flag was specified.'
+	)
+	parser.add_argument(
+		'--include', action='extend', nargs='*', metavar='FILE', default=[],
+		help='Files to load from the profile in addition to those loaded by default.\n'
+		'Paths must point to their final destination and be either absolute or relative to the home directory.\n'
+		'Files that are loaded by default can be checked using `konfsave list <profile>`.'
+	)
+	parser.add_argument(
+		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
+		help='Files to not load from the profile. This overrides values specified by the profile\'s configuration.\n'
+		'Path format is the same as for --include.'
+	)
+	args = parser.parse_args(argv)
+	include = set()
+	exclude = set()
+	for path in map(Path, args.exclude):
+		if not path.is_absolute():
+			path = Path.home() / path
+		exclude.add(path)
+	for path in map(Path, args.include):
+		if not path.is_absolute():
+			path = Path.home() / path
+		include.add(path)
+	profiles.load(
+		args.profile,
+		include,
+		exclude,
+		overwrite_unsaved_configuration=args.overwrite
+	)

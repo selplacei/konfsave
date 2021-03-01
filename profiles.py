@@ -89,29 +89,31 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 	The KDE configuration will be overwritten if:
 		* ``overwrite_unsaved_configuration`` is True
 			OR all of the following is true:
-		* There is a ``current_profile`` file in ``{KONFSAVE_DATA_PATH}``
-		* A profile with the same name is saved
-		* The two profiles' latest Git commits have the same hash
+		* A profile is active
+		* The source profile's info JSON is valid
+		* The user manually confirmed that they want to overwrite their configuration
 	"""
 	profile_root = config.KONFSAVE_PROFILE_HOME / name
 	if overwrite_unsaved_configuration is not True:  # Be really sure that overwriting is intentional
 		# If the checks below fail, exit the function.
 		try:
 			current_info = profile_info()
-			assert current_info is not None
-			source_info = profile_info(name)
-			assert source_info is not None
-			if current_info['name'] != source_info['name']:
-				print('Warning: you\'re loading a new profile. Konfsave cannot check if every existing file has been saved.')
-				if input('Are you sure you want to overwrite the current configuration? [y/N]: ').lower() != 'y':
-					print('Loading aborted.')
-					return
+			assert (profile_root / config.KONFSAVE_PROFILE_INFO_FILENAME).is_file()
+			if current_info is None:
+				print('Warning: there is no active profile, and the current configuration is NOT SAVED.')
+			elif current_info['name'] != name:
+				print('Warning: you\'re loading a new profile. Konfsave cannot check if the currently active profile has been updated with current files.')
+			else:
+				print('Warning: you\'re overwriting the current profile with existing configuration. Konfsave cannot check if the saved files are up-to-date.')
+			if input('Are you sure you want to overwrite the current system configuration? [y/N]: ').lower() != 'y':
+				print('Loading aborted.')
+				return
 		except Exception as e:
 			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
 			raise
 	config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
-		(f'Copying {path}')
+		print(f'Copying {path}')
 		source = profile_root / path
 		if source.exists():
 			copy_path(source, Path.home() / path)
