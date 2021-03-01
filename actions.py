@@ -149,6 +149,7 @@ def action_save(argv):
 		include=include,
 		exclude=exclude
 	)
+	print('Success')
 	
 	
 def action_load(argv):
@@ -163,7 +164,7 @@ def action_load(argv):
 		'Otherwise, the user will be asked for confirmation. Using --overwrite will bypass both of these checks.'
 	)
 	parser.add_argument(
-		'--no-restart',
+		'--no-restart', action='store_false', dest='restart',
 		help='After loading a profile, the Plasma shell is restarted, unless this flag was specified.'
 	)
 	parser.add_argument(
@@ -194,3 +195,8 @@ def action_load(argv):
 		exclude,
 		overwrite_unsaved_configuration=args.overwrite
 	)
+	if args.restart:
+		# Can't use --replace because it can't be passed to kstart5.
+		subprocess.run(['killall', 'plasmashell'])
+		subprocess.run(['kstart5', 'plasmashell'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	print('Success')

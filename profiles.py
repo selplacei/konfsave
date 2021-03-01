@@ -9,6 +9,8 @@ import config
 # TODO: write proper docstrings so that this can be used as a library
 
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
+	if config.KONFSAVE_PRINT_COPYINGED_FILES:
+		print(f'Copying {path}')
 	destination.parent.mkdir(parents=True, exist_ok=True)
 	if source.is_dir():
 		shutil.copytree(
@@ -25,9 +27,8 @@ def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 			
 def current_profile():
 	try:
-		with open(config.KONFSAVE_CURRENT_PROFILE_PATH, 'r') as f:
-			return f.read().strip()
-	except FileNotFoundError:
+		return profile_info()['name']
+	except KeyError:
 		return None
 
 
@@ -67,7 +68,6 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	profile_dir = (config.KONFSAVE_PROFILE_HOME / name) if destination is None else destination
 	profile_dir.mkdir(parents=True, exist_ok=True)
 	for path in map(Path, paths_to_save(name, include, exclude, nonexisting_ok=True)):
-		print(f'Copying {path}')
 		if not path.exists():
 			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
@@ -77,8 +77,8 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
-		'include': info['include'] if info else [],
-		'exclude': info['exclude'] if info else []
+		'include': list(info['include']) if info else [],
+		'exclude': list(info['exclude']) if info else []
 	}
 	with open(profile_dir / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
 		json.dump(new_info, f)
@@ -113,7 +113,6 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 			raise
 	config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
-		print(f'Copying {path}')
 		source = profile_root / path
 		if source.exists():
 			copy_path(source, Path.home() / path)
@@ -145,6 +144,6 @@ def parse_profile_info(profile_info_file_path) -> Optional[dict]:
 			info['exclude'] = set(map(Path, info['exclude'] or ()))
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path};\n{str(e)}\n')
+		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)}')
 		return None
 	
