@@ -12,32 +12,14 @@ HELP_TEXT = '''Konfsave is a KDE config manager.
 usage: konfsave <action> [args ...] [flags ...]
 
 Actions:
-help, --help, -h                   Print this message.
-i[nfo] [profile]                   Get info about a profile if specified. Otherwise, show the active profile and list saved profiles.
-list[-files] [profile]             List the files that `save` would copy given current circumstances.
-s[ave] [profile]                   Save the current configuration.
-                                   If there is an active profile and its name is different from what's given here, the new name will overwrite it.
-    --destination <path>           Instead of saving to the default location, copy files to a path.
-    --follow-symlinks              By default, symlinks are copied as symlinks.
-                                   If this option is given, the contents of symlinked files are copied instead.
-    --include <files ...>          In addition to files included by default, include these files.
-    --exclude <files ...>          If any of the given files would be included otherwise, exclude them.
-                                   File paths for --include and --exclude must be inside the home directoy,
-                                   and may be specified as relative to the home directory or absolute.
-                                   Each profile can also specify its own list of additional files to include or exclude.
-                                   These lists can be changed with `set-include` or `set-exclude`, respectively.
-                                   The --include and --exclude flags will override such lists wherever conflicts occur.
-                                   `save` will never attempt to delete files from existing saved profiles.
-load <profile>                     Load a saved profile.
-    --overwrite                    By default, loading will fail if the current configuration isn\'t saved. This will override it.
-    --no-restart                   Unless this flag is given, the Plasma shell will restart after new configuration is loaded.
-    --include <files ...>          Same as in `save`.
-    --exclude <files ...>          Same as in `save`.
-r[ename] <profile> <result>        Rename a profile.
-set-include [profile] <files ...>  Set a profile-specific list of additional files to include by default.
-set-exclude [profile] <files ...>  Set a profile-specific list of files to exclude by default.
+help, --help, -h	print this message and exit
+i[nfo]              get info about the current configuration, or a profile if specified
+list[-files]        list the files that `save` would copy
+s[ave]              save the current configuration
+load                load a saved profile
+r[ename]            rename a profile
 
-For `save`, `set-include`, and `set-exclude`, specifying the profile is optional only if a profile is currently active.
+To see detailed usage instructions, run `konfsave <action> --help`. All flags starting with '--' can be abbreviated.
 '''
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
 	valid = name.isidentifier()
@@ -121,14 +103,61 @@ def action_list_files(argv):
 
 
 def action_save(argv):
-	parser = argparse.ArgumentParser(prog='konfsave save', add_help=True)
-	parser.add_argument('--profile', metavar='NAME')
-	parser.add_argument('--destination', metavar='DEST', type=Path)
-	parser.add_argument('--follow-symlinks', action='store_true', dest='follow_symlinks')
-	parser.add_argument('--include', action='extend', nargs='*', metavar='FILE', type=Path)
-	parser.add_argument('--exclude', action='extend', nargs='*', metavar='FILE', type=Path)
+	parser = argparse.ArgumentParser(
+		prog='konfsave save', add_help=True,
+		# The default usage string has "[profile]" at the end, for some reason.
+		usage='konfsave save [-h] [name] [--destination DEST] [--follow-symlinks] [--include [FILE ...]] [--exclude [FILE ...]]'
+	)
+	parser.add_argument(
+		'profile', metavar='name', nargs='?', default=profiles.current_profile(),
+		help='Save as the specified profile instead of using the currently loaded name. This is required if no profile is active.'
+	)
+	parser.add_argument(
+		'--destination', metavar='DEST', type=Path,
+		help='Instead of saving to Konfsave\'s profile storage, save to a specified destination.'
+	)
+	parser.add_argument(
+		'--follow-symlinks', '-s', action='store_true', dest='follow_symlinks',
+		help='By default, symlinks are copied as symlinks. If this flag is used, the contents of symlinked files will be copied.'
+	)
+	parser.add_argument(
+		'--include', action='extend', nargs='*', metavar='FILE', type=Path, default=[],
+		help='Files to add to the profile. Paths must be either absolute or relative to the home directory.\n'
+		'In either case, the actual file must be inside of the home directory.\n'
+		'Files specified here will be included even if the profile excludes them by default.'
+	)
+	parser.add_argument(
+		'--exclude', action='extend', nargs='*', metavar='FILE', type=Path, default=[],
+		help='Files to exclude from the profile; that is, they will not be copied,\n'
+		'but if they already exist in the profile, they will not be deleted. Path format is the same as for --include.\n'
+		'Files specified here will be excluded even if the profile includes them by default.'
+	)
 	args = parser.parse_args(argv)
-	
+	info = profiles.profile_info(args.profile)
+	if info:
+		include = info['include']
+		exclude = info['exclude']
+	else:
+		include = set()
+		exclude = set()
+	for path in args.exclude:
+		if not path.is_absolute():
+			path = Path.home() / path
+		include.discard(path)
+		exclude.add(path)
+	for path in args.include:
+		if not path.is_absolute():
+			path = Path.home() / path
+		if path not in args.exclude:
+			exclude.discard(path)
+		include.add(path)
+	profiles.save(
+		name=args.profile,
+		destination=args.destination,
+		follow_symlinks=args.follow_symlinks,
+		include=include,
+		exclude=exclude
+	)
 	
 	
 def action_load(argv):

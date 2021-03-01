@@ -31,7 +31,7 @@ def current_profile():
 		return None
 
 
-def paths_to_save(name=None, include=None, exclude=None, default_include=None) -> Set[Path]:
+def paths_to_save(name=None, include=None, exclude=None, default_include=None, nonexisting_ok=False) -> Set[Path]:
 	"""
 	``include``, ``exclude``, and ``default_include`` must be given as absolute paths
 	Paths are returned as absolute and resolved
@@ -42,42 +42,43 @@ def paths_to_save(name=None, include=None, exclude=None, default_include=None) -
 	include = set(map(lambda p: Path(p).resolve(), include or ()))
 	exclude = set(map(lambda p: Path(p).resolve(), exclude or ()))
 	if not name:
-		info = profile_info() or {'exclude': set(), 'include': set()}
+		info = profile_info()
 	else:
 		info = profile_info(name)
-		if info is None:
+		if info is None and not nonexisting_ok:
 			raise ValueError(f'The profile "{name}" doesn\'t exist.')
+	info = info or {'exclude': set(), 'include': set()}
 	exclude = (exclude | set(map(lambda p: (Path.home() / p).resolve(), info['exclude']))) - include
 	include = (include | set(map(lambda p: (Path.home() / p).resolve(), info['include']))) - exclude
 	return (default_include | include) - exclude
 
 
-def save(name=None, include=None, exclude=None, follow_symlinks=False):
+def save(name=None, include=None, exclude=None, follow_symlinks=False, destination=None):
 	"""
 	If ``name`` is unspecified, the current configuration is saved.
 	``include`` and ``exclude`` must be given in the same format as to ``paths_to_save()``.
 	"""
 	info = profile_info(name)
-	if info is None:
-		raise RuntimeError('Attempted to save the current profile, but no profile is active.')
-	if not name:
-		name = info['name']
-	profile_dir = config.KONFSAVE_PROFILE_HOME / name
+	if name is None:
+		if info is None:
+			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
+		else:
+			name = info['name']
+	profile_dir = (config.KONFSAVE_PROFILE_HOME / name) if destination is None else destination
 	profile_dir.mkdir(parents=True, exist_ok=True)
-	for path in map(Path, paths_to_save(name, include, exclude)):
+	for path in map(Path, paths_to_save(name, include, exclude, nonexisting_ok=True)):
 		print(f'Copying {path}')
 		if not path.exists():
 			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
 			sys.stderr.write(f'Warning: this path is not within the user\'s home directory. Skipping\n')
 		else:
-			destination = profile_dir / path.relative_to(Path.home())
-			copy_path(path, destination, follow_symlinks=follow_symlinks)
+			copy_path(path, profile_dir / path.relative_to(Path.home()), follow_symlinks=follow_symlinks)
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
-		'include': info['include'],
-		'exclude': info['exclude']
+		'include': info['include'] if info else [],
+		'exclude': info['exclude'] if info else []
 	}
 	with open(profile_dir / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
 		json.dump(new_info, f)
@@ -138,8 +139,8 @@ def parse_profile_info(profile_info_file_path) -> Optional[dict]:
 		with open(profile_info_file_path) as f:
 			info = json.load(f)
 			assert info['name'].isidentifier()
-			info['include'] = set(info['include'] or ())
-			info['exclude'] = set(info['exclude'] or ())
+			info['include'] = set(map(Path, info['include'] or ()))
+			info['exclude'] = set(map(Path, info['exclude'] or ()))
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
 		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path};\n{str(e)}\n')
