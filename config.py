@@ -16,6 +16,7 @@ KONFSAVE_PRINT_COPYINGED_FILES = False
 
 _XDG_CONFIG_PATHS_TO_SAVE = {
 	# These paths are relative to $XDG_CONFIG_HOME (usually ~/.config).
+	# The actual files must be within the home directory, i.e. no '..'s that go outside.
 	'gtk-2.0',
 	'gtk-3.0',
 	'Kvantum',
@@ -41,5 +42,6 @@ _XDG_CONFIG_PATHS_TO_SAVE = {
 
 PATHS_TO_SAVE = set(map(lambda p: Path.home() / p, {
 	# These paths are relative to the home directory.
+	# The actual files must be within the home directory, i.e. no '..'s that go outside.
 	'.kde4'
 })) | set(map(lambda p: CONFIG_HOME / p, _XDG_CONFIG_PATHS_TO_SAVE))
