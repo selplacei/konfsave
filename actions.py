@@ -67,10 +67,10 @@ def action_info(argv):
 			print(f'Stored at: {config.KONFSAVE_PROFILE_HOME / current_profile}')
 		else:
 			print(f'No profile is currently active.')
-		if saved_profiles := list(map(lambda q: q.name, filter(
+		if saved_profiles := sorted(list(map(lambda q: q.name, filter(
 			lambda p: (p / config.KONFSAVE_PROFILE_INFO_FILENAME).exists(),
 			config.KONFSAVE_PROFILE_HOME.glob('*')
-		))):
+		))), key=str.lower):
 			print(f'Saved profiles:\n  {_N_T.join(saved_profiles)}')
 		else:
 			print('No profiles are saved.')
