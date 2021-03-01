@@ -21,6 +21,14 @@ def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 	else:
 		if overwrite or not destination.exists():
 			shutil.copy(source, destination, follow_symlinks=follow_symlinks)
+			
+			
+def current_profile():
+	try:
+		with open(config.KONFSAVE_CURRENT_PROFILE_PATH, 'r') as f:
+			return f.read().strip()
+	except FileNotFoundError:
+		return None
 
 
 def paths_to_save(name, include=None, exclude=None, default_include=None) -> Set[str]:
@@ -99,12 +107,16 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 	shutil.copyfile(profile_root / 'info.json', config.KONFSAVE_CURRENT_PROFILE_PATH)
 
 
-def profile_info(profile_info_file_path=None) -> Optional[dict]:
+def profile_info(profile_name=None) -> Optional[dict]:
 	"""
 	When no argument is supplied, this will read ``config.KONFSAVE_CURRENT_PROFILE_PATH``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
-	path = profile_info_file_path or config.KONFSAVE_CURRENT_PROFILE_PATH
+	profile_name = profile_name or current_profile()
+	return parse_profile_info(config.KONFSAVE_PROFILE_HOME / profile_name / config.KONFSAVE_PROFILE_INFO_FILENAME)
+
+
+def parse_profile_info(profile_info_file_path) -> Optional[dict]:
 	try:
 		with open(path) as f:
 			info = json.load(f)

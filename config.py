@@ -11,6 +11,7 @@ else:
 KONFSAVE_DATA_PATH = CONFIG_HOME / 'konfsave'
 KONFSAVE_PROFILE_HOME = KONFSAVE_DATA_PATH / 'profiles'
 KONFSAVE_CURRENT_PROFILE_PATH = KONFSAVE_DATA_PATH / 'current_profile'
+KONFSAVE_PROFILE_INFO_FILENAME = '.konfsave_profile'
 
 _XDG_CONFIG_PATHS_TO_SAVE = {
 	# These paths are relative to $XDG_CONFIG_HOME (~/.config).
