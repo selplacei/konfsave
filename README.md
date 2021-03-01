@@ -6,6 +6,8 @@ and then load profiles by name. Of course, it's also possible to take these prof
 
 OK, I lied. Although this is supposed to be a KDE config manager, it can work for pretty much anything that's stored in your home directory. You still have to be on a UNIX-like system, however. Just change the paths in `config.py` to suit your needs and use '--no-restart' to disable restarting the Plasma shell if you don't care about its configs.
 
+Inspired by https://github.com/Prayag2/konsave.
+
 ## Notable features
 
 - Storing the current configuration as a profile
@@ -36,4 +38,4 @@ Right now, this program is WIP. Although you could find it useful in its current
 
 ## License
 
-Copyright (c) 2021 Illia Boiko (selplacei). All source code in this repository may only be used under the terms and conditions found in the LICENSE file.
+Copyright (c) 2021 Illia Boiko (selplacei) and contributors. All source code in this repository may only be used under the terms and conditions found in the LICENSE file.
