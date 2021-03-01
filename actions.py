@@ -14,13 +14,13 @@ usage: konfsave <action> [args ...] [flags ...]
 
 Actions:
 help, --help, -h    print this message and exit
-i[nfo]              get info about the current configuration, or a profile if specified
-list[-files]        list the files that `save` would copy
-s[ave]              save the current configuration
-load                load a saved profile
-r[ename]            rename a profile
+i, info             get info about the current configuration, or a profile if specified
+s, save             save the current configuration
+l, load             load a saved profile
+list-files          list files that save would copy
 
-To see detailed usage instructions, run `konfsave <action> --help`. All flags starting with '--' can be abbreviated.
+To see detailed usage instructions, run `konfsave <action> --help`.
+All flags starting with '--' can be abbreviated.
 '''
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
 	valid = name.isidentifier()
@@ -41,7 +41,7 @@ def parse_arguments(argv):
 		next(v for k, v in {
             ('-h', '--help', 'help'): lambda *_: print(HELP_TEXT),
 			('i', 'info'): action_info,
-			('list', 'list-files'): action_list_files,
+			('list-files'): action_list_files,
 			('s', 'save'): action_save,
 			('load'): action_load
 		}.items() if action in k)(argv[2:])
