@@ -8,6 +8,14 @@ from typing import Optional, Set
 import config
 # TODO: write proper docstrings so that this can be used as a library
 
+def validate_profile_name(name, exit_if_invalid=True) -> bool:
+	valid = name.isidentifier()
+	if (not valid) and exit_if_invalid:
+		sys.stderr.write(f'The profile name "{name}" is invalid.\n')
+		sys.exit(1)
+	return valid
+
+
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 	if config.KONFSAVE_PRINT_COPYINGED_FILES:
 		print(f'Copying {path}')
@@ -28,12 +36,14 @@ def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 def current_profile():
 	try:
 		return profile_info()['name']
-	except KeyError:
+	except TypeError:
 		return None
 
 
 def paths_to_save(name=None, include=None, exclude=None, default_include=None, nonexisting_ok=False) -> Set[Path]:
 	"""
+	The name is not validated in this function.
+	
 	``include``, ``exclude``, and ``default_include`` must be given as absolute paths
 	Paths are returned as absolute and resolved
 	If ``name`` is not specified, the current profile will be used if one is active;
@@ -56,7 +66,9 @@ def paths_to_save(name=None, include=None, exclude=None, default_include=None, n
 
 def save(name=None, include=None, exclude=None, follow_symlinks=False, destination=None):
 	"""
-	If ``name`` is unspecified, the current configuration is saved.
+	The name is not validated in this function.
+	
+	If ``name`` is unspecified, the current profile's name is used.
 	``include`` and ``exclude`` must be given in the same format as to ``paths_to_save()``.
 	"""
 	info = profile_info(name)
@@ -86,6 +98,8 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 
 def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False):
 	"""
+	The name is not validated in this function.
+	
 	The KDE configuration will be overwritten if:
 		* ``overwrite_unsaved_configuration`` is True
 			OR all of the following is true:
@@ -121,29 +135,82 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 	shutil.copyfile(profile_root / config.KONFSAVE_PROFILE_INFO_FILENAME, config.KONFSAVE_CURRENT_PROFILE_PATH)
 
 
-def profile_info(profile_name=None) -> Optional[dict]:
+def change(results, profile=None):
 	"""
+	``results`` is a dictionary containing modified attributes and their values.
+	Attributes that exist in the profile but are not present in ``results`` will be kept as is.
+	
+	If the name is changed, ``rename()`` will be called. Additionally, if ``profile`` is
+	the same as the current profile, the current profile's attributes will be changed as well.
+	"""
+	current = current_profile()
+	if profile is None:
+		if current is None:
+			raise RuntimeError('Attempted to change the current profile, but no profile is active.')
+		profile = current
+	new_info = profile_info(profile, convert_sets=False).copy()
+	new_info.update(results)
+	if profile == current:
+		# Also modify the profile info stored in the home directory
+		with open(config.KONFSAVE_CURRENT_PROFILE_PATH, 'w') as f:
+			f.write(json.dumps(new_info))
+	if 'name' in results:
+		rename(profile, results['name'], change_info=False)  # Avoid writing to the file twice
+	with open(config.KONFSAVE_PROFILE_HOME / new_info['name'] / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+		f.write(json.dumps(new_info))
+		
+		
+def rename(source, result, change_info=True):
+	"""
+	Rename a saved profile by changing its info and directory. Only the resulting name is validated.
+	The current profile is not modified even if its name matches the source name.
+	"""
+	validate_profile_name(result)
+	if (config.KONFSAVE_PROFILE_HOME / result).exists():
+		raise FileExistsError(f'A profile named "{result}" is already saved.')
+	if not (config.KONFSAVE_PROFILE_HOME / source).exists():
+		raise RuntimeError(f'The profile "{source}" doesn\'t exist.')
+	if change_info:
+		info = profile_info(source)
+		info.update({'name': result})
+		with open(config.KONFSAVE_PROFILE_HOME / source / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+			f.write(json.dumps(new_info))
+	(config.KONFSAVE_PROFILE_HOME / source).rename(config.KONFSAVE_PROFILE_HOME / result)
+
+
+def profile_info(profile_name=None, convert_sets=True) -> Optional[dict]:
+	"""
+	If the profile name is invalid, this function will print a warning and continue normally.
+	
 	When no argument is supplied, this will read ``config.KONFSAVE_CURRENT_PROFILE_PATH``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
+	if profile_name and not validate_profile_name(profile_name, exit_if_invalid=False):
+		sys.stderr.write(f'Warning: "f{profile_info}" is an invalid profile name\n')
 	try:
 		return parse_profile_info(
 			(config.KONFSAVE_PROFILE_HOME / profile_name / config.KONFSAVE_PROFILE_INFO_FILENAME) \
-				if profile_name else config.KONFSAVE_CURRENT_PROFILE_PATH
+				if profile_name else config.KONFSAVE_CURRENT_PROFILE_PATH, convert_sets=convert_sets
 		)
 	except FileNotFoundError:
 		return None
 
 
-def parse_profile_info(profile_info_file_path) -> Optional[dict]:
+def parse_profile_info(profile_info_file_path, convert_sets=True) -> Optional[dict]:
 	try:
 		with open(profile_info_file_path) as f:
 			info = json.load(f)
 			assert info['name'].isidentifier()
-			info['include'] = set(map(Path, info['include'] or ()))
-			info['exclude'] = set(map(Path, info['exclude'] or ()))
+			info['include'] = map(Path, info['include'] or ())
+			info['exclude'] = map(Path, info['exclude'] or ())
+			if convert_sets:
+				info['include'] = set(info['include'])
+				info['exclude'] = set(info['exclude'])
+			else:
+				info['include'] = list(info['include'])
+				info['exclude'] = list(info['exclude'])
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)}')
+		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)}\n')
 		return None
 	

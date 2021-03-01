@@ -17,20 +17,12 @@ help, --help, -h    print this message and exit
 i, info             get info about the current configuration, or a profile if specified
 s, save             save the current configuration
 l, load             load a saved profile
+c, change			modify a profile's attributes
 list-files          list files that save would copy
 
 To see detailed usage instructions, run `konfsave <action> --help`.
 All flags starting with '--' can be abbreviated.
 '''
-def validate_profile_name(name, exit_if_invalid=True) -> bool:
-	valid = name.isidentifier()
-	if not valid:
-		sys.stderr.write(f'The profile name "{name}" is invalid.\n')
-		if exit_if_invalid:
-			sys.exit(1)
-	return valid
-
-
 def parse_arguments(argv):
 	# Actions need to parsed separately because each action has its own
 	# argument format, so different ArgumentParser objects have to be used.
@@ -43,7 +35,8 @@ def parse_arguments(argv):
 			('i', 'info'): action_info,
 			('list-files'): action_list_files,
 			('s', 'save'): action_save,
-			('load'): action_load
+			('l', 'load'): action_load,
+			('c', 'change'): action_change
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
@@ -57,7 +50,7 @@ def action_info(argv):
 	)
 	args = parser.parse_args(argv)
 	if profile := args.profile:
-		validate_profile_name(profile)
+		profiles.validate_profile_name(profile)
 		info = profiles.profile_info(profile)
 		if info is None:
 			print(f'The profile {profile} doesn\'t exist.')
@@ -94,7 +87,7 @@ def action_list_files(argv):
 	)
 	args = parser.parse_args(argv)
 	if args.profile:
-		validate_profile_name(args.profile)
+		profiles.validate_profile_name(args.profile)
 	try:
 		print('\n'.join(sorted(map(str, profiles.paths_to_save(args.profile)), key=str.lower)))
 	except ValueError as e:
@@ -104,7 +97,7 @@ def action_list_files(argv):
 def action_save(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave save',
-		# The default usage string has "[name]" at the end, for some reason.
+		# The default usage string puts "[name]" at the end, for some reason.
 		usage='konfsave save [-h] [name] [--destination DEST] [--follow-symlinks] [--include [FILE ...]] [--exclude [FILE ...]]'
 	)
 	parser.add_argument(
@@ -132,6 +125,8 @@ def action_save(argv):
 		'Files specified here will be excluded even if the profile includes them by default.'
 	)
 	args = parser.parse_args(argv)
+	if args.profile:
+		profiles.validate_profile_name(args.profile)
 	include = set()
 	exclude = set()
 	for path in map(Path, args.exclude):
@@ -179,6 +174,7 @@ def action_load(argv):
 		'Path format is the same as for --include.'
 	)
 	args = parser.parse_args(argv)
+	profiles.validate_profile_name(args.profile)
 	include = set()
 	exclude = set()
 	for path in map(Path, args.exclude):
@@ -200,3 +196,23 @@ def action_load(argv):
 		subprocess.run(['killall', 'plasmashell'])
 		subprocess.run(['kstart5', 'plasmashell'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	print('Success')
+	
+	
+def action_change(argv):
+	parser = argparse.ArgumentParser(prog='konfsave change')
+	parser.add_argument(
+		'profile', nargs='?',
+		help='Profile to change. If not specified, the current profile will be used. Note that this will'
+		'change the profile\'s saved attributes as well; if you\'d like to store new attributes as a'
+		'separate profile, save the configuration under a new name first.'
+	)
+	parser.add_argument(
+		'--name', help='New name for the profile.'
+	)
+	args = parser.parse_args(argv)
+	results = {k: v for k, v in vars(args).items() if k != 'profile' and v}
+	if results:
+		profiles.change(results, args.profile)
+		print('Success')
+	else:
+		print('Nothing to change')
