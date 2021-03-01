@@ -17,7 +17,7 @@ help, --help, -h    print this message and exit
 i, info             get info about the current configuration, or a profile if specified
 s, save             save the current configuration
 l, load             load a saved profile
-c, change			modify a profile's attributes
+c, change           modify a profile's attributes
 list-files          list files that save would copy
 
 To see detailed usage instructions, run `konfsave <action> --help`.
@@ -36,7 +36,8 @@ def parse_arguments(argv):
 			('list-files'): action_list_files,
 			('s', 'save'): action_save,
 			('l', 'load'): action_load,
-			('c', 'change'): action_change
+			('c', 'change'): action_change,
+			('d', 'delete'): action_delete
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
@@ -185,17 +186,18 @@ def action_load(argv):
 		if not path.is_absolute():
 			path = Path.home() / path
 		include.add(path)
-	profiles.load(
+	success = not profiles.load(
 		args.profile,
 		include,
 		exclude,
 		overwrite_unsaved_configuration=args.overwrite
 	)
-	if args.restart:
-		# Can't use --replace because it can't be passed to kstart5.
-		subprocess.run(['killall', 'plasmashell'])
-		subprocess.run(['kstart5', 'plasmashell'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-	print('Success')
+	if success:
+		if args.restart:
+			# Can't use --replace because it can't be passed to kstart5.
+			subprocess.run(['killall', 'plasmashell'])
+			subprocess.run(['kstart5', 'plasmashell'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		print('Success')
 	
 	
 def action_change(argv):
@@ -216,3 +218,19 @@ def action_change(argv):
 		print('Success')
 	else:
 		print('Nothing to change')
+
+
+def action_delete(argv):
+	parser = argparse.ArgumentParser(
+		prog='konfsave delete',
+		description='Delete a profile. Current system configuration will be unchanged;'
+		'however, if the deleted profile is active, there will no longer be an active profile.'
+	)
+	parser.add_argument(
+		'profile', help='The profile to delete.'
+	)
+	parser.add_argument('--noconfirm', action='store_false', dest='confirm')
+	args = parser.parse_args(argv)
+	success = not profiles.delete(args.profile, confirm=args.confirm)
+	if success:
+		print('Success')

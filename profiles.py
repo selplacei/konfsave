@@ -96,9 +96,10 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 		json.dump(new_info, f)
 
 
-def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False):
+def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False) -> bool:
 	"""
 	The name is not validated in this function.
+	True is returned if the user canceled the action.
 	
 	The KDE configuration will be overwritten if:
 		* ``overwrite_unsaved_configuration`` is True
@@ -121,7 +122,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 				print('Warning: you\'re overwriting the current profile with existing configuration. Konfsave cannot check if the saved files are up-to-date.')
 			if input('Are you sure you want to overwrite the current system configuration? [y/N]: ').lower() != 'y':
 				print('Loading aborted.')
-				return
+				return True
 		except Exception as e:
 			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
 			raise
@@ -157,7 +158,7 @@ def change(results, profile=None):
 	if 'name' in results:
 		rename(profile, results['name'], change_info=False)  # Avoid writing to the file twice
 	with open(config.KONFSAVE_PROFILE_HOME / new_info['name'] / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
-		f.write(json.dumps(new_info))
+		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 		
 		
 def rename(source, result, change_info=True):
@@ -174,8 +175,25 @@ def rename(source, result, change_info=True):
 		info = profile_info(source)
 		info.update({'name': result})
 		with open(config.KONFSAVE_PROFILE_HOME / source / config.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
-			f.write(json.dumps(new_info))
+			f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 	(config.KONFSAVE_PROFILE_HOME / source).rename(config.KONFSAVE_PROFILE_HOME / result)
+
+
+def delete(profile, clear_active=True, confirm=True) -> bool:
+	"""
+	If ``clear_active`` is True and the deleted profile has the same name as the active profile,
+	the active profile info will be deleted as well. Current configuration will be unaffected.
+	
+	True is returned if the user canceled the action.
+	"""
+	if confirm:
+		print(f'Warning: you\'re about to delete the profile "{profile}".')
+		if input('Are you sure you want to permanently delete it? [y/N]: ') != 'y':
+			print('Deleting aborted.')
+			return True
+	if clear_active and profile == current_profile():
+		config.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
+	shutil.rmtree(config.KONFSAVE_PROFILE_HOME / profile)
 
 
 def profile_info(profile_name=None, convert_sets=True) -> Optional[dict]:
