@@ -13,7 +13,7 @@ HELP_TEXT = '''Konfsave is a KDE config manager.
 usage: konfsave <action> [args ...] [flags ...]
 
 Actions:
-help, --help, -h	print this message and exit
+help, --help, -h    print this message and exit
 i[nfo]              get info about the current configuration, or a profile if specified
 list[-files]        list the files that `save` would copy
 s[ave]              save the current configuration
