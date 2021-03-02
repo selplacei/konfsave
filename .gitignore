@@ -2,3 +2,8 @@
 .mypy_cache/
 venv/
 __pycache__/
+
+# Python packaging tools
+build/
+dist/
+konfsave\.egg-info

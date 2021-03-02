@@ -15,6 +15,7 @@ KONFSAVE_PROFILE_HOME = KONFSAVE_DATA_PATH / 'profiles'
 KONFSAVE_PROFILE_INFO_FILENAME = '.konfsave_profile'
 KONFSAVE_CURRENT_PROFILE_PATH = Path.home() / KONFSAVE_PROFILE_INFO_FILENAME
 KONFSAVE_PRINT_COPYINGED_FILES = False
+KONFSAVE_DEFAULT_CONFIG_PATH = Path(__file__).parent / 'default_config.ini'
 
 PATHS_TO_SAVE = set()
 
@@ -22,7 +23,7 @@ PATHS_TO_SAVE = set()
 if not (KONFSAVE_DATA_PATH / 'config.ini').exists():
 	print('Config file missing, copying from default')
 	KONFSAVE_DATA_PATH.mkdir(parents=True, exist_ok=True)
-	with open(KONFSAVE_DATA_PATH / 'config.ini', 'w') as f, open('default_config.ini') as d:
+	with open(KONFSAVE_DATA_PATH / 'config.ini', 'w') as f, open(KONFSAVE_DEFAULT_CONFIG_PATH) as d:
 		f.write(d.read())
 
 # Load the config file
