@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys
 
-import constants
-import actions
+from . import constants
+from . import actions
 
 
 if __name__ == '__main__':

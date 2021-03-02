@@ -4,8 +4,8 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-import constants
-import profiles
+from . import constants
+from . import profiles
 
 _N_T = '\n  '  # Backslashes are not allowed in f-string expressions, so use a variable
 HELP_TEXT = '''Konfsave is a KDE config manager.

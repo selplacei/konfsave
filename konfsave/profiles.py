@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 from typing import Optional, Set
 
-import constants
+from . import constants
 # TODO: write proper docstrings so that this can be used as a library
 
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
