@@ -34,13 +34,12 @@ There are 2 installation options:
 
 Konfsave is on [PyPI](https://pypi.org/project/konfsave/), which means that it can be installed with `pip`:  
 	`python -m pip install konfsave`  
-However, as of right now, this will _not_ add Konfsave to your PATH; either run it with `python -m konfsave`,
-or create an alias: `echo 'alias konfsave="python -m konfsave"' >> ~/.bashrc` (or whichever file your shell uses).
+After this, you should be able to run Konfsave directly from the terminal. If not, try `python -m konfsave`.
 
 #### The crude way
 
-`main.py` can be run as is; just download the repository.
-You can also run `install.sh` which will copy files to `.config` and link `main.py` to `.local/bin/konfsave`.
+`__main__.py` can be run as is; just download the repository.
+You can also run `install.sh` which will copy files to `.config` and link `__main__.py` to `.local/bin/konfsave`.
 Unlike the PyPI method, this will not allow you to easily update the program.
 
 ## Future features

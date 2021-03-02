@@ -1,9 +1,13 @@
 #!/usr/bin/env python
 import sys
 
-from . import constants
-from . import actions
+from konfsave import constants
+from konfsave import actions
 
+
+def main():
+	actions.parse_arguments(sys.argv)
+	
 
 if __name__ == '__main__':
-	actions.parse_arguments(sys.argv)
+	main()
