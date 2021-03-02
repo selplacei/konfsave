@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-import config
+import constants
 import profiles
 
 _N_T = '\n  '  # Backslashes are not allowed in f-string expressions, so use a variable
@@ -57,7 +57,7 @@ def action_info(argv):
 			print(f'The profile {profile} doesn\'t exist.')
 		else:
 			print(f'Name: {info["name"]}')
-			print(f'Stored at: {config.KONFSAVE_PROFILE_HOME / profile}')
+			print(f'Stored at: {constants.KONFSAVE_PROFILE_HOME / profile}')
 			if include := info['include']:
 				print(f'Files to additionally include: \n  {_N_T.join(map(str, include))}')
 			if exclude := info['exclude']:
@@ -65,12 +65,12 @@ def action_info(argv):
 	else:
 		if current_profile := profiles.current_profile():
 			print(f'Current profile: {current_profile}')
-			print(f'Stored at: {config.KONFSAVE_PROFILE_HOME / current_profile}')
+			print(f'Stored at: {constants.KONFSAVE_PROFILE_HOME / current_profile}')
 		else:
 			print(f'No profile is currently active.')
 		if saved_profiles := sorted(list(map(lambda q: q.name, filter(
-			lambda p: (p / config.KONFSAVE_PROFILE_INFO_FILENAME).exists(),
-			config.KONFSAVE_PROFILE_HOME.glob('*')
+			lambda p: (p / constants.KONFSAVE_PROFILE_INFO_FILENAME).exists(),
+			constants.KONFSAVE_PROFILE_HOME.glob('*')
 		))), key=str.lower):
 			print(f'Saved profiles:\n  {_N_T.join(saved_profiles)}')
 		else:

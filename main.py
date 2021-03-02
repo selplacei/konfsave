@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 
-import config
+import constants
 import actions
 
 
