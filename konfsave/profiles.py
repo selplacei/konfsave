@@ -71,7 +71,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	If ``name`` is unspecified, the current profile's name is used.
 	``include`` and ``exclude`` must be given in the same format as to ``paths_to_save()``.
 	"""
-	info = profile_info(name)
+	info = profile_info(name, convert_values=False)
 	if name is None:
 		if info is None:
 			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
@@ -81,19 +81,19 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	profile_dir.mkdir(parents=True, exist_ok=True)
 	for path in map(Path, paths_to_save(name, include, exclude, nonexisting_ok=True)):
 		if not path.exists():
-			sys.stderr.write(f'Warning: this path doesn\'t exist. Skipping\n')
+			sys.stderr.write(f'Warning: the path {path} doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
-			sys.stderr.write(f'Warning: this path is not within the user\'s home directory. Skipping\n')
+			sys.stderr.write(f'Warning: the path {path} is not within the user\'s home directory. Skipping\n')
 		else:
 			copy_path(path, profile_dir / path.relative_to(Path.home()), follow_symlinks=follow_symlinks)
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
-		'include': list(info['include']) if info else [],
-		'exclude': list(info['exclude']) if info else []
+		'include': info['include'] if info else [],
+		'exclude': info['exclude'] if info else []
 	}
 	with open(profile_dir / constants.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
-		json.dump(new_info, f)
+		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 
 
 def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False) -> bool:
@@ -196,7 +196,7 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 	shutil.rmtree(constants.KONFSAVE_PROFILE_HOME / profile)
 
 
-def profile_info(profile_name=None, convert_sets=True) -> Optional[dict]:
+def profile_info(profile_name=None, convert_values=True) -> Optional[dict]:
 	"""
 	If the profile name is invalid, this function will print a warning and continue normally.
 	
@@ -208,27 +208,25 @@ def profile_info(profile_name=None, convert_sets=True) -> Optional[dict]:
 	try:
 		return parse_profile_info(
 			(constants.KONFSAVE_PROFILE_HOME / profile_name / constants.KONFSAVE_PROFILE_INFO_FILENAME) \
-				if profile_name else constants.KONFSAVE_CURRENT_PROFILE_PATH, convert_sets=convert_sets
+				if profile_name else constants.KONFSAVE_CURRENT_PROFILE_PATH, convert_values=convert_values
 		)
 	except FileNotFoundError:
 		return None
 
 
-def parse_profile_info(profile_info_file_path, convert_sets=True) -> Optional[dict]:
+def parse_profile_info(profile_info_file_path, convert_values=True) -> Optional[dict]:
 	try:
 		with open(profile_info_file_path) as f:
 			info = json.load(f)
 			assert info['name'].isidentifier()
-			info['include'] = map(Path, info['include'] or ())
-			info['exclude'] = map(Path, info['exclude'] or ())
 			if convert_sets:
-				info['include'] = set(info['include'])
-				info['exclude'] = set(info['exclude'])
+				info['include'] = set(map(Path, info['include'] or []))
+				info['exclude'] = set(map(Path, info['exclude'] or []))
 			else:
-				info['include'] = list(info['include'])
-				info['exclude'] = list(info['exclude'])
+				info['include'] = info['include'] or []
+				info['exclude'] = info['exclude'] or []
 			return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)}\n')
+		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)} \n')
 		return None
 	
