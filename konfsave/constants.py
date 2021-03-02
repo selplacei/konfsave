@@ -29,6 +29,7 @@ if not (KONFSAVE_DATA_PATH / 'config.ini').exists():
 # Load the config file
 with open(KONFSAVE_DATA_PATH / 'config.ini') as f:
 	config = configparser.ConfigParser(allow_no_value=True)
+	config.optionxform = str
 	config.read_file(f)
 	try:
 		xdg_paths = list(config['XDG_CONFIG_HOME Paths To Save'].keys())

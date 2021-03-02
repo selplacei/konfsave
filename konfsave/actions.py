@@ -128,6 +128,12 @@ def action_save(argv):
 	args = parser.parse_args(argv)
 	if args.profile:
 		profiles.validate_profile_name(args.profile)
+	if args.profile \
+		and (constants.KONFSAVE_PROFILE_HOME / args.profile).exists() \
+		and (current := profiles.profile_info()) \
+		and current['name'] != args.profile:
+			if input(f'Warning: the profile "{args.profile}" already exists. Are you sure you want to overwrite it? [y/N]: ') != 'y':
+				return
 	include = set()
 	exclude = set()
 	for path in map(Path, args.exclude):

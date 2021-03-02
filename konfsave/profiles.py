@@ -186,6 +186,9 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 	
 	True is returned if the user canceled the action.
 	"""
+	if not (constants.KONFSAVE_PROFILE_HOME / profile).exists():
+		sys.stderr.write(f'The profile "{profile}" doesn\'t exist.\n')
+		return True
 	if confirm:
 		print(f'Warning: you\'re about to delete the profile "{profile}".')
 		if input('Are you sure you want to permanently delete it? [y/N]: ') != 'y':
@@ -196,20 +199,28 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 	shutil.rmtree(constants.KONFSAVE_PROFILE_HOME / profile)
 
 
-def profile_info(profile_name=None, convert_values=True) -> Optional[dict]:
+_profile_info_cache = {}
+
+def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Optional[dict]:
 	"""
 	If the profile name is invalid, this function will print a warning and continue normally.
 	
 	When no argument is supplied, this will read ``constants.KONFSAVE_CURRENT_PROFILE_PATH``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
+	if use_cache and profile_name in _profile_info_cache:
+		return _profile_info_cache[profile_name]
 	if profile_name and not validate_profile_name(profile_name, exit_if_invalid=False):
 		sys.stderr.write(f'Warning: "f{profile_info}" is an invalid profile name\n')
 	try:
-		return parse_profile_info(
+		info = parse_profile_info(
 			(constants.KONFSAVE_PROFILE_HOME / profile_name / constants.KONFSAVE_PROFILE_INFO_FILENAME) \
 				if profile_name else constants.KONFSAVE_CURRENT_PROFILE_PATH, convert_values=convert_values
 		)
+		if use_cache:
+			_profile_info_cache[profile_name] = info
+			return info.copy()
+		return info
 	except FileNotFoundError:
 		return None
 
@@ -219,7 +230,7 @@ def parse_profile_info(profile_info_file_path, convert_values=True) -> Optional[
 		with open(profile_info_file_path) as f:
 			info = json.load(f)
 			assert info['name'].isidentifier()
-			if convert_sets:
+			if convert_values:
 				info['include'] = set(map(Path, info['include'] or []))
 				info['exclude'] = set(map(Path, info['exclude'] or []))
 			else:
