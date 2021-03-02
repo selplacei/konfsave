@@ -25,10 +25,23 @@ Python 3.8+ is required.
 
 ## Installation & Usage
 
-`main.py` can be run as is. The configuration file, `config.ini`, is stored in `${XDG_CONFIG_HOME}/konfsave`.
-You can use the `install.sh` script to properly install Konfsave for the current user.
-
+The configuration file, `config.ini`, is stored in `${XDG_CONFIG_HOME}/konfsave`.  
 Usage instructions can be viewed with `konfsave --help`.
+
+There are 2 installation options:
+
+#### PyPI
+
+Konfsave is on [PyPI](https://pypi.org/project/konfsave/), which means that it can be installed with `pip`:  
+	`python -m pip install konfsave`  
+However, as of right now, this will _not_ add Konfsave to your PATH; either run it with `python -m konfsave`,
+or create an alias: `echo 'alias konfsave="python -m konfsave"' >> ~/.bashrc` (or whichever file your shell uses).
+
+#### The crude way
+
+`main.py` can be run as is; just download the repository.
+You can also run `install.sh` which will copy files to `.config` and link `main.py` to `.local/bin/konfsave`.
+Unlike the PyPI method, this will not allow you to easily update the program.
 
 ## Future features
 
