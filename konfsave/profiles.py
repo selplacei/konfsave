@@ -3,7 +3,7 @@ import os
 import shutil
 import json
 from pathlib import Path
-from typing import Optional, Set
+from typing import Optional, Set, Union, TextIO
 
 from . import constants
 # TODO: write proper docstrings so that this can be used as a library
@@ -217,7 +217,7 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 			(constants.KONFSAVE_PROFILE_HOME / profile_name / constants.KONFSAVE_PROFILE_INFO_FILENAME) \
 				if profile_name else constants.KONFSAVE_CURRENT_PROFILE_PATH, convert_values=convert_values
 		)
-		if use_cache:
+		if use_cache and info:
 			_profile_info_cache[profile_name] = info
 			return info.copy()
 		return info
@@ -225,19 +225,26 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 		return None
 
 
-def parse_profile_info(profile_info_file_path, convert_values=True) -> Optional[dict]:
+def parse_profile_info(profile_info_file: Union[TextIO, os.PathLike], convert_values=True) -> Optional[dict]:
 	try:
-		with open(profile_info_file_path) as f:
-			info = json.load(f)
-			assert info['name'].isidentifier()
-			if convert_values:
-				info['include'] = set(map(Path, info['include'] or []))
-				info['exclude'] = set(map(Path, info['exclude'] or []))
-			else:
-				info['include'] = info['include'] or []
-				info['exclude'] = info['exclude'] or []
-			return info
+		if isinstance(profile_info_file, os.PathLike):
+			f = open(profile_info_file)
+		else:
+			f = profile_info_file
+		info = json.load(f)
+		assert info['name'].isidentifier()
+		if convert_values:
+			info['include'] = set(map(Path, info['include'] or []))
+			info['exclude'] = set(map(Path, info['exclude'] or []))
+		else:
+			info['include'] = info['include'] or []
+			info['exclude'] = info['exclude'] or []
+		return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
-		sys.stderr.write(f'Warning: malformed profile info at {profile_info_file_path}\n{str(e)} \n')
+		if isinstance(profile_info_file, os.PathLike):
+			sys.stderr.write(f'Warning: malformed profile info at {profile_info_file}\n{str(e)} \n')
 		return None
+	finally:
+		if isinstance(profile_info_file, os.PathLike):
+			f.close()
 	

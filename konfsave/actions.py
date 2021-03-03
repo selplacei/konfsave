@@ -21,6 +21,7 @@ s, save             save the current configuration
 l, load             load a saved profile
 c, change           modify a profile's attributes
 a, archive          export a profile as a ZIP file
+u, unarchive        import an archived profile
 list-files          list files that save would copy
 
 To see detailed usage instructions, run `konfsave <action> --help`.
@@ -36,12 +37,13 @@ def parse_arguments(argv):
 		next(v for k, v in {
             ('-h', '--help', 'help'): lambda *_: print(HELP_TEXT),
 			('i', 'info', 'ls'): action_info,
-			('list-files'): action_list_files,
+			('list-files',): action_list_files,
 			('s', 'save'): action_save,
 			('l', 'load'): action_load,
 			('c', 'change'): action_change,
 			('d', 'delete'): action_delete,
-			('a', 'archive'): action_archive
+			('a', 'archive'): action_archive,
+			('u', 'unarchive'): action_unarchive
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
@@ -72,10 +74,12 @@ def action_info(argv):
 			print(f'Stored at: {constants.KONFSAVE_PROFILE_HOME / current_profile}')
 		else:
 			print(f'No profile is currently active.')
-		if saved_profiles := sorted(list(map(lambda q: q.name, filter(
+		# Choose directories which are valid profile names and contain an info file;
+		# then, convert paths to names, and sort the final list of profiles.
+		if saved_profiles := sorted(list(filter(lambda n: profiles.validate_profile_name(n, False), map(lambda q: q.name, filter(
 			lambda p: (p / constants.KONFSAVE_PROFILE_INFO_FILENAME).exists(),
 			constants.KONFSAVE_PROFILE_HOME.glob('*')
-		))), key=str.lower):
+		)))), key=str.lower):
 			print(f'Saved profiles:\n  {_N_T.join(saved_profiles)}')
 		else:
 			print('No profiles are saved.')
@@ -305,3 +309,33 @@ def action_archive(argv):
 	else:
 		return
 	sys.stderr.write(f'Archiving "{args.profile}" failed.')
+
+
+def action_unarchive(argv):
+	parser = argparse.ArgumentParser(
+		prog='konfsave unarchive',
+		description='Unpack and save a profile that was previously archived.',
+		# The default usage puts "file" at the end
+		usage='konfsave unarchive [-h] file [--name NAME] [--overwrite]'
+	)
+	parser.add_argument(
+		'file', type=Path,
+		help='Path to the archive to extract from.'
+	)
+	parser.add_argument(
+		'--name', help='Extract to a specified profile name (by default, it\'s the same as the archived profile).'
+	)
+	parser.add_argument(
+		'--overwrite', action='store_true',
+		help='By default, if the destination profile already exists, the user will be asked for confirmation.'
+		'Using this option will silently overwrite such profiles instead.'
+	)
+	args = parser.parse_args(argv)
+	if args.name:
+		profiles.validate_profile_name(args.name)
+	if not archive.unarchive_profile(
+		source=args.file,
+		new_name=args.name,
+		overwrite=args.overwrite
+	):
+		print('Success')
