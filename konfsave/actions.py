@@ -47,6 +47,8 @@ def parse_arguments(argv):
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
+	except KeyboardInterrupt:
+		sys.stderr.write('Action cancelled.')
 	
 
 def action_info(argv):
