@@ -1,11 +1,13 @@
 import sys
 import argparse
 import subprocess
+import zipfile
 from pathlib import Path
 from typing import List
 
 from . import constants
 from . import profiles
+from . import archive
 
 _N_T = '\n  '  # Backslashes are not allowed in f-string expressions, so use a variable
 HELP_TEXT = '''Konfsave is a KDE config manager.
@@ -14,10 +16,11 @@ usage: konfsave <action> [args ...] [flags ...]
 
 Actions:
 help, --help, -h    print this message and exit
-i, info             get info about the current configuration, or a profile if specified
+i, info, ls         get info about the current configuration, or a profile if specified
 s, save             save the current configuration
 l, load             load a saved profile
 c, change           modify a profile's attributes
+a, archive          export a profile as a ZIP file
 list-files          list files that save would copy
 
 To see detailed usage instructions, run `konfsave <action> --help`.
@@ -32,12 +35,13 @@ def parse_arguments(argv):
 	try:
 		next(v for k, v in {
             ('-h', '--help', 'help'): lambda *_: print(HELP_TEXT),
-			('i', 'info'): action_info,
+			('i', 'info', 'ls'): action_info,
 			('list-files'): action_list_files,
 			('s', 'save'): action_save,
 			('l', 'load'): action_load,
 			('c', 'change'): action_change,
-			('d', 'delete'): action_delete
+			('d', 'delete'): action_delete,
+			('a', 'archive'): action_archive
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
@@ -251,3 +255,53 @@ def action_delete(argv):
 	success = not profiles.delete(args.profile, confirm=args.confirm)
 	if success:
 		print('Success')
+
+
+def action_archive(argv):
+	parser = argparse.ArgumentParser(
+		prog='konfsave archive', description='Export/archive a profile to share or import later.',
+		# The default usage puts "profile" at the end
+		usage='konfsave archive [-h] [profile] [--destination PATH] [--overwrite] [--compresslevel LEVEL] [--compression {store,lzma,deflate,bzip2}]'
+	)
+	parser.add_argument(
+		'profile', nargs='?', help='The profile to archive.', default=profiles.current_profile()
+	)
+	parser.add_argument(
+		'--destination', metavar='PATH', type=Path,
+		help='The full path (including the filename) of the resulting archive. '
+		f'By default, archives are saved as "[profile name].konfsave.zip" under the home directory.'
+	)
+	parser.add_argument(
+		'--overwrite', action='store_true',
+		help='Unless this option is specified, if the resulting file already exists, archiving will fail.'
+	)
+	parser.add_argument(
+		'--compresslevel', type=int, default='9', metavar='LEVEL',
+		help='How much to compress the archive, from 1 to 9 (9 by default). This has no effect if --compression is "store" or "lzma".'
+	)
+	parser.add_argument(
+		'--compression', choices=['store', 'lzma', 'deflate', 'bzip2'], default='bzip2',
+		help='Compression method (bzip2 by default). "store" means no compression.'
+	)
+	args = parser.parse_args(argv)
+	compression = {
+		'store': zipfile.ZIP_STORED,
+		'lzma': zipfile.ZIP_LZMA,
+		'deflate': zipfile.ZIP_DEFLATED,
+		'bzip2': zipfile.ZIP_BZIP2
+	}[args.compression]
+	try:
+		archive.archive_profile(
+			profile=args.profile,
+			overwrite=args.overwrite,
+			destination=args.destination,
+			compresslevel=args.compresslevel,
+			compression=compression
+		)
+	except FileExistsError as e:
+		sys.stderr.write(f'The file {e.filename} already exists.\n')
+	except RuntimeError as e:
+		sys.stderr.write(f'Error: {str(e)}\n')
+	else:
+		return
+	sys.stderr.write(f'Archiving "{args.profile}" failed.')
