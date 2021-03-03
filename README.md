@@ -11,13 +11,14 @@ Inspired by https://github.com/Prayag2/konsave.
 ## Notable features
 
 - Storing the current configuration as a profile
+- Optionally following symlinks
 - Remembering which profile is active at the moment
-- Updating profiles with new configuration
+- Updating existing profiles
 - Switching between profiles
 - Listing and configuring paths to save (both files and directories are supported)
 - Per-profile configuration of additional paths to save or exclude by default
 - Specifying additional paths to include or exclude using command-line arguments
-- Optionally following symlinks when saving paths
+- Archiving (exporting) and importing profiles
 
 ## Requirements
 
@@ -44,7 +45,7 @@ Unlike the PyPI method, this will not allow you to easily update the program.
 
 ## Future features
 
-Right now, this program is WIP. Although it's useful in its current state, more features are planned, such as storing profiles as Git repositories and archiving/compressing them.
+Right now, this program is WIP. Although it's useful in its current state, more features are planned, such as storing profiles as Git repositories and printing human-friendly information about which files are saved and what they do.
 
 ## License
 
