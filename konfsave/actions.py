@@ -210,9 +210,26 @@ def action_load(argv):
 	)
 	if success:
 		if args.restart:
-			# Can't use --replace because it can't be passed to kstart5.
-			subprocess.run(['killall', 'plasmashell'])
-			subprocess.run(['kstart5', 'plasmashell'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			subprocess.run(['sh', '-c', 'plasmashell --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			print('Plasma shell restarted')
+			try:
+				# Check if Kwin is running
+				subprocess.run(['ps', '-C', 'kwin_x11'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			except subprocess.CalledProcessError:
+				print('No running instance of Kwin detected')
+			else:
+				# If so, restart Kwin
+				subprocess.run(['sh', '-c', 'kwin_x11 --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+				print('Kwin restarted')
+			try:
+				# Check if Latte Dock is running
+				subprocess.run(['ps', '-C', 'latte-dock'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			except subprocess.CalledProcessError:
+				print('No running instance of Latte detected')
+			else:
+				# If so, restart Latte Dock
+				subprocess.run(['sh', '-c', 'latte-dock --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+				print('Latte restarted')
 		print('Success')
 	
 	
