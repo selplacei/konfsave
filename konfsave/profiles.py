@@ -40,27 +40,43 @@ def current_profile():
 		return None
 
 
-def paths_to_save(name=None, include=None, exclude=None, default_include=None, nonexisting_ok=False) -> Set[Path]:
+def resolve_group(val) -> Path:
 	"""
-	The name is not validated in this function.
-	
-	``include``, ``exclude``, and ``default_include`` must be given as absolute paths
-	Paths are returned as absolute and resolved
-	If ``name`` is not specified, the current profile will be used if one is active;
-	otherwise, the default list from config.ini is used
+	Resolve a possible group, as specified in the user's config.
+	If ``val`` is os.PathLike, it's converted to Path, resolved, and returned.
+	``val`` is considered a group if it starts with a colon.
+	If the group isn't defined, KeyError is raised.
+	If ``val`` doesn't either represent a path or start with a colon, ValueError is raised.
 	"""
-	default_include = set(map(lambda p: Path(p).resolve(), default_include or constants.PATHS_TO_SAVE))
-	include = set(map(lambda p: Path(p).resolve(), include or ()))
-	exclude = set(map(lambda p: Path(p).resolve(), exclude or ()))
-	if not name:
-		info = profile_info()
+	if isinstance(val, os.PathLike):
+		return Path(val).resolve()
+	elif isinstance(val, str) and val.startswith(':'):
+		return config.groups[val]  # Raises KeyError if the group is undefined
 	else:
-		info = profile_info(name)
-		if info is None and not nonexisting_ok:
-			raise ValueError(f'The profile "{name}" doesn\'t exist.')
-	info = info or {'exclude': set(), 'include': set()}
-	exclude = (exclude | set(map(lambda p: (Path.home() / p).resolve(), info['exclude']))) - include
-	include = (include | set(map(lambda p: (Path.home() / p).resolve(), info['include']))) - exclude
+		raise ValueError(f'The value "{val}" is not a path or a group name.')
+
+
+def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]:
+	"""
+	Calculate and return a set of paths to save to or load from a profile.
+	Paths are returned as absolute and resolved, and point to the actual files in the home directory.
+	
+	The parameters ``include`` and ``exclude`` represent overrides, typically given by the user as
+	command line arguments. They will always take priority over existing configuration.
+	The parameter ``default_include`` represents a list of default paths to include, and is typically not specified as an argument.
+	If it is None, the list is read from the config by looking up every ``config.defaults['default-groups']`` in ``config.groups``.
+	If it is an empty iterator, only values specified in ``include`` and ``exclude`` are considered.
+	
+	``include``, ``exclude``, and ``default_include`` must be given either as absolute paths (os.PathLike) or groups (starting with a colon).
+	"""
+	include = set(map(lambda p: resolve_group(p), include or ()))
+	exclude = set(map(lambda p: resolve_group(p), exclude or ()))
+	if default_include:
+		default_include = set(map(lambda p: resolve_group(p), default_include))
+	else:
+		default_include = set()
+		for group in config.default_groups:
+			default_include |= set(config.paths[group])
 	return (default_include | include) - exclude
 
 
