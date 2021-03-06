@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional, Set, Union, TextIO
 
 from . import constants
+from . import config
 # TODO: write proper docstrings so that this can be used as a library
 
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
@@ -74,9 +75,7 @@ def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]
 	if default_include:
 		default_include = set(map(lambda p: resolve_group(p), default_include))
 	else:
-		default_include = set()
-		for group in config.default_groups:
-			default_include |= set(config.paths[group])
+		default_include = config.default_paths()
 	return (default_include | include) - exclude
 
 

@@ -3,7 +3,7 @@ import sys
 import configparser
 from pathlib import Path
 
-import config
+from . import config
 
 
 if (_config_home := os.path.expandvars('$XDG_CONFIG_HOME')) != '$XDG_CONFIG_HOME':

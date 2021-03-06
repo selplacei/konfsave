@@ -92,15 +92,9 @@ def action_list_files(argv):
 		prog='konfsave list',
 		description='Print a list of files that would be saved by \'konfsave save\'.'
 	)
-	parser.add_argument(
-		'profile', nargs='?', default=profiles.current_profile(), metavar='profile_name',
-		help='If provided, lists files that would be saved to a specific profile (according to its configuration).'
-	)
 	args = parser.parse_args(argv)
-	if args.profile:
-		profiles.validate_profile_name(args.profile)
 	try:
-		print('\n'.join(sorted(map(str, profiles.paths_to_save(args.profile)), key=str.lower)))
+		print('\n'.join(sorted(map(str, profiles.paths_to_save()), key=str.lower)))
 	except ValueError as e:
 		print(str(e))
 
