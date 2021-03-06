@@ -15,14 +15,14 @@ defaults = {  # Mapping of keys to values stored in the [Defaults] section, conv
 
 def load_config():
 	# Create the config file if missing
-	if not (constants.KONFSAVE_DATA_PATH / 'konfsave.ini').exists():
+	if not (constants.DATA_PATH / 'konfsave.ini').exists():
 		print('Config file missing, copying from default')
-		constants.KONFSAVE_DATA_PATH.mkdir(parents=True, exist_ok=True)
-		with open(KONFSAVE_DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.KONFSAVE_DEFAULT_CONFIG_PATH) as d:
+		constants.DATA_PATH.mkdir(parents=True, exist_ok=True)
+		with open(constants.DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.DEFAULT_CONFIG_PATH) as d:
 			f.write(d.read())
 
 	# Load the config file
 	config = configparser.ConfigParser(allow_no_value=True)
 	config.optionxform = str
-	with open(constants.KONFSAVE_DATA_PATH / 'konfsave.ini') as f:
+	with open(constants.DATA_PATH / 'konfsave.ini') as f:
 		config.read_file(f)

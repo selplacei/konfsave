@@ -17,7 +17,7 @@ def validate_profile_name(name, exit_if_invalid=True) -> bool:
 
 
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
-	if constants.KONFSAVE_PRINT_COPYINGED_FILES:
+	if constants.PRINT_COPYINGED_FILES:
 		print(f'Copying {path}')
 	destination.parent.mkdir(parents=True, exist_ok=True)
 	if source.is_dir():
@@ -93,7 +93,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
 		else:
 			name = info['name']
-	profile_dir = (constants.KONFSAVE_PROFILE_HOME / name) if destination is None else destination
+	profile_dir = (constants.PROFILE_HOME / name) if destination is None else destination
 	profile_dir.mkdir(parents=True, exist_ok=True)
 	for path in map(Path, paths_to_save(name, include, exclude, nonexisting_ok=True)):
 		if not path.exists():
@@ -108,7 +108,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 		'include': info['include'] if info else [],
 		'exclude': info['exclude'] if info else []
 	}
-	with open(profile_dir / constants.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+	with open(profile_dir / constants.PROFILE_INFO_FILENAME, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 
 
@@ -124,12 +124,12 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		* The source profile's info JSON is valid
 		* The user manually confirmed that they want to overwrite their configuration
 	"""
-	profile_root = constants.KONFSAVE_PROFILE_HOME / name
+	profile_root = constants.PROFILE_HOME / name
 	if overwrite_unsaved_configuration is not True:  # Be really sure that overwriting is intentional
 		# If the checks below fail, exit the function.
 		try:
 			current_info = profile_info()
-			assert (profile_root / constants.KONFSAVE_PROFILE_INFO_FILENAME).is_file()
+			assert (profile_root / constants.PROFILE_INFO_FILENAME).is_file()
 			if current_info is None:
 				print('Warning: there is no active profile, and the current configuration is NOT SAVED.')
 			elif current_info['name'] != name:
@@ -142,14 +142,14 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		except Exception as e:
 			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
 			raise
-	constants.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
+	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
 		source = profile_root / path
 		if source.exists():
 			copy_path(source, Path.home() / path)
 		else:
 			sys.stderr.write(f'Warning: the file {source} doesn\'t exist. Skipping\n')
-	shutil.copyfile(profile_root / constants.KONFSAVE_PROFILE_INFO_FILENAME, constants.KONFSAVE_CURRENT_PROFILE_PATH)
+	shutil.copyfile(profile_root / constants.PROFILE_INFO_FILENAME, constants.CURRENT_PROFILE_PATH)
 
 
 def change(results, profile=None):
@@ -169,11 +169,11 @@ def change(results, profile=None):
 	new_info.update(results)
 	if profile == current:
 		# Also modify the profile info stored in the home directory
-		with open(constants.KONFSAVE_CURRENT_PROFILE_PATH, 'w') as f:
+		with open(constants.CURRENT_PROFILE_PATH, 'w') as f:
 			f.write(json.dumps(new_info))
 	if 'name' in results:
 		rename(profile, results['name'], change_info=False)  # Avoid writing to the file twice
-	with open(constants.KONFSAVE_PROFILE_HOME / new_info['name'] / constants.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+	with open(constants.PROFILE_HOME / new_info['name'] / constants.PROFILE_INFO_FILENAME, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 		
 		
@@ -183,16 +183,16 @@ def rename(source, result, change_info=True):
 	The current profile is not modified even if its name matches the source name.
 	"""
 	validate_profile_name(result)
-	if (constants.KONFSAVE_PROFILE_HOME / result).exists():
+	if (constants.PROFILE_HOME / result).exists():
 		raise FileExistsError(f'A profile named "{result}" is already saved.')
-	if not (constants.KONFSAVE_PROFILE_HOME / source).exists():
+	if not (constants.PROFILE_HOME / source).exists():
 		raise RuntimeError(f'The profile "{source}" doesn\'t exist.')
 	if change_info:
 		info = profile_info(source)
 		info.update({'name': result})
-		with open(constants.KONFSAVE_PROFILE_HOME / source / constants.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+		with open(constants.PROFILE_HOME / source / constants.PROFILE_INFO_FILENAME, 'w') as f:
 			f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
-	(constants.KONFSAVE_PROFILE_HOME / source).rename(constants.KONFSAVE_PROFILE_HOME / result)
+	(constants.PROFILE_HOME / source).rename(constants.PROFILE_HOME / result)
 
 
 def delete(profile, clear_active=True, confirm=True) -> bool:
@@ -202,7 +202,7 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 	
 	True is returned if the user canceled the action.
 	"""
-	if not (constants.KONFSAVE_PROFILE_HOME / profile).exists():
+	if not (constants.PROFILE_HOME / profile).exists():
 		sys.stderr.write(f'The profile "{profile}" doesn\'t exist.\n')
 		return True
 	if confirm:
@@ -211,8 +211,8 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 			print('Deleting aborted.')
 			return True
 	if clear_active and profile == current_profile():
-		constants.KONFSAVE_CURRENT_PROFILE_PATH.unlink(missing_ok=True)
-	shutil.rmtree(constants.KONFSAVE_PROFILE_HOME / profile)
+		constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
+	shutil.rmtree(constants.PROFILE_HOME / profile)
 
 
 _profile_info_cache = {}
@@ -221,7 +221,7 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 	"""
 	If the profile name is invalid, this function will print a warning and continue normally.
 	
-	When no argument is supplied, this will read ``constants.KONFSAVE_CURRENT_PROFILE_PATH``.
+	When no argument is supplied, this will read ``constants.CURRENT_PROFILE_PATH``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
 	if use_cache and profile_name in _profile_info_cache:
@@ -230,8 +230,8 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 		sys.stderr.write(f'Warning: "f{profile_info}" is an invalid profile name\n')
 	try:
 		info = parse_profile_info(
-			(constants.KONFSAVE_PROFILE_HOME / profile_name / constants.KONFSAVE_PROFILE_INFO_FILENAME) \
-				if profile_name else constants.KONFSAVE_CURRENT_PROFILE_PATH, convert_values=convert_values
+			(constants.PROFILE_HOME / profile_name / constants.PROFILE_INFO_FILENAME) \
+				if profile_name else constants.CURRENT_PROFILE_PATH, convert_values=convert_values
 		)
 		if use_cache and info:
 			_profile_info_cache[profile_name] = info

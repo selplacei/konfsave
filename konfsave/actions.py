@@ -65,7 +65,7 @@ def action_info(argv):
 			print(f'The profile {profile} doesn\'t exist.')
 		else:
 			print(f'Name: {info["name"]}')
-			print(f'Stored at: {constants.KONFSAVE_PROFILE_HOME / profile}')
+			print(f'Stored at: {constants.PROFILE_HOME / profile}')
 			if include := info['include']:
 				print(f'Files to additionally include: \n  {_N_T.join(map(str, include))}')
 			if exclude := info['exclude']:
@@ -73,14 +73,14 @@ def action_info(argv):
 	else:
 		if current_profile := profiles.current_profile():
 			print(f'Current profile: {current_profile}')
-			print(f'Stored at: {constants.KONFSAVE_PROFILE_HOME / current_profile}')
+			print(f'Stored at: {constants.PROFILE_HOME / current_profile}')
 		else:
 			print(f'No profile is currently active.')
 		# Choose directories which are valid profile names and contain an info file;
 		# then, convert paths to names, and sort the final list of profiles.
 		if saved_profiles := sorted(list(filter(lambda n: profiles.validate_profile_name(n, False), map(lambda q: q.name, filter(
-			lambda p: (p / constants.KONFSAVE_PROFILE_INFO_FILENAME).exists(),
-			constants.KONFSAVE_PROFILE_HOME.glob('*')
+			lambda p: (p / constants.PROFILE_INFO_FILENAME).exists(),
+			constants.PROFILE_HOME.glob('*')
 		)))), key=str.lower):
 			print(f'Saved profiles:\n  {_N_T.join(saved_profiles)}')
 		else:
@@ -139,7 +139,7 @@ def action_save(argv):
 	if args.profile:
 		profiles.validate_profile_name(args.profile)
 	if args.profile \
-		and (constants.KONFSAVE_PROFILE_HOME / args.profile).exists() \
+		and (constants.PROFILE_HOME / args.profile).exists() \
 		and (current := profiles.profile_info()) \
 		and current['name'] != args.profile:
 			if input(f'Warning: the profile "{args.profile}" already exists. Are you sure you want to overwrite it? [y/N]: ') != 'y':
