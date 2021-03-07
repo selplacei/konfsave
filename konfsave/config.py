@@ -25,12 +25,13 @@ print_copyinged_files = False
 
 def default_paths() -> Tuple[Path]:
 	"""
-	Convert and return ``defaults['save-list']`` as a set of absolute and resolved ``Path``s.
+	Convert and return ``defaults['save-list']`` as a tuple of absolute and resolved ``Path``s.
 	"""
-	return set(*itertools.chain(map(lambda g: paths[g], defaults['save-list'])))
+	return tuple(itertools.chain.from_iterable(map(lambda g: paths[g], save_list)))
 
 
 def load_config():
+	global definitions, metagroups, paths, exceptions, save_list, print_copyinged_files
 	# Create the config file if missing
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
 		sys.stderr.write('Config file missing, copying from default')
@@ -46,8 +47,8 @@ def load_config():
 	
 	# Load exceptions
 	for path in itertools.chain(
-		map(lambda v: (Path.home() / Path(v)).resolve(), config['Home Directory Path Definitions'].keys()),
-		map(lambda v: (constants.CONFIG_HOME / Path(v)).resolve(), config['XDG_CONFIG_HOME Path Definitions'].keys())
+		map(lambda v: (Path.home() / Path(v)).resolve(), config['Home Directory Exceptions'].keys()),
+		map(lambda v: (constants.CONFIG_HOME / Path(v)).resolve(), config['XDG_CONFIG_HOME Exceptions'].keys())
 	):
 		exceptions.add(path)
 

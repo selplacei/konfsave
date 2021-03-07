@@ -1,5 +1,6 @@
 import sys
 import os
+import itertools
 import shutil
 import json
 from pathlib import Path
@@ -17,8 +18,18 @@ def validate_profile_name(name, exit_if_invalid=True) -> bool:
 	return valid
 
 
+def copy_allow_samefile(*args, **kwargs):
+	"""
+	Identical to ``shutil.copy()``, but doesn't raise an exception when copying the same file.
+	"""
+	try:
+		shutil.copy(*args, **kwargs)
+	except shutil.SameFileError:
+		pass
+
+
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
-	if constants.PRINT_COPYINGED_FILES:
+	if config.print_copyinged_files:
 		print(f'Copying {path}')
 	destination.parent.mkdir(parents=True, exist_ok=True)
 	if source.is_dir():
@@ -26,12 +37,12 @@ def copy_path(source, destination, overwrite=True, follow_symlinks=False):
 			src=source,
 			dst=destination,
 			symlinks=follow_symlinks,
-			copy_function=shutil.copy,
+			copy_function=copy_allow_samefile,
 			dirs_exist_ok=overwrite
 		)
 	else:
 		if overwrite or not destination.exists():
-			shutil.copy(source, destination, follow_symlinks=follow_symlinks)
+			copy_allow_samefile(source, destination, follow_symlinks=follow_symlinks)
 			
 			
 def current_profile():
@@ -41,41 +52,57 @@ def current_profile():
 		return None
 
 
-def resolve_group(val) -> Path:
+def resolve_group(val) -> Set[Path]:
 	"""
 	Resolve a possible group, as specified in the user's config.
-	If ``val`` is os.PathLike, it's converted to Path, resolved, and returned.
+	If ``val`` is os.PathLike, it's converted to Path, resolved, and returned as a single item in a set.
 	``val`` is considered a group if it starts with a colon.
 	If the group isn't defined, KeyError is raised.
 	If ``val`` doesn't either represent a path or start with a colon, ValueError is raised.
 	"""
 	if isinstance(val, os.PathLike):
-		return Path(val).resolve()
+		return {Path(val).resolve()}
 	elif isinstance(val, str) and val.startswith(':'):
-		return config.groups[val]  # Raises KeyError if the group is undefined
+		return config.paths[val]  # Raises KeyError if the group is undefined
 	else:
 		raise ValueError(f'The value "{val}" is not a path or a group name.')
 
 
+def expand_path(path) -> Set[Path]:
+	"""
+	If ``path`` points to a directory, return all files within the directory (recursively).
+	Otherwise, return a set that contains ``path`` as its sole member.
+	"""
+	if path.is_dir():
+		return set(path.glob('**/*'))
+	return {path}
+
+
 def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]:
 	"""
-	Calculate and return a set of paths to save to or load from a profile.
-	Paths are returned as absolute and resolved, and point to the actual files in the home directory.
+	Calculate and return a set of files to save to or load from a profile.
+	Paths are returned as absolute and resolved, and point to the actual files in the home directory (never directories).
 	
 	The optional parameters ``include`` and ``exclude`` represent overrides, typically given by the user as
 	command line arguments. They will always take priority over other configuration.
 	The optional parameter ``default_include`` represents a list of default paths to include, and is typically not specified.
-	If it is None, the list is read from the config by looking up every ``config.defaults['default-groups']`` in ``config.groups``.
+	If it is None, the list is read from the config's save-list.
 	If it is an empty iterator, only values specified in ``include`` and ``exclude`` are considered.
 	
 	``include``, ``exclude``, and ``default_include`` must be given either as absolute paths (os.PathLike) or groups (starting with a colon).
 	"""
-	include = set(map(lambda p: resolve_group(p), include or ()))
-	exclude = set(map(lambda p: resolve_group(p), exclude or ()))
+	include = {*itertools.chain(map(resolve_group, include or ()))}
+	include = {*itertools.chain.from_iterable(map(expand_path, include))}
+	exclude = {*itertools.chain(map(resolve_group, exclude or ()))}
+	exclude = {*itertools.chain.from_iterable(map(expand_path, exclude))}
+	for exception in itertools.chain.from_iterable(map(expand_path, config.exceptions)):
+		if exception not in include:
+			exclude.add(exception)
 	if default_include:
-		default_include = set(map(lambda p: resolve_group(p), default_include))
+		default_include = {*itertools.chain.from_iterable(map(resolve_group, default_include))}
 	else:
-		default_include = config.default_paths()
+		default_include = {*itertools.chain.from_iterable(map(resolve_group, config.default_paths()))}
+	default_include = {*itertools.chain.from_iterable(map(expand_path, default_include))}
 	return (default_include | include) - exclude
 
 
@@ -94,7 +121,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 			name = info['name']
 	profile_dir = (constants.PROFILE_HOME / name) if destination is None else destination
 	profile_dir.mkdir(parents=True, exist_ok=True)
-	for path in map(Path, paths_to_save(name, include, exclude, nonexisting_ok=True)):
+	for path in map(Path, paths_to_save(include, exclude)):
 		if not path.exists():
 			sys.stderr.write(f'Warning: the path {path} doesn\'t exist. Skipping\n')
 		elif not path.is_relative_to(Path.home()):
@@ -142,7 +169,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
 			raise
 	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
-	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(name, include, exclude)):
+	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(include, exclude)):
 		source = profile_root / path
 		if source.exists():
 			copy_path(source, Path.home() / path)
@@ -164,7 +191,7 @@ def change(results, profile=None):
 		if current is None:
 			raise RuntimeError('Attempted to change the current profile, but no profile is active.')
 		profile = current
-	new_info = profile_info(profile, convert_sets=False).copy()
+	new_info = profile_info(profile, convert_values=False).copy()
 	new_info.update(results)
 	if profile == current:
 		# Also modify the profile info stored in the home directory
@@ -242,11 +269,15 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 
 def parse_profile_info(profile_info_file: Union[TextIO, os.PathLike], convert_values=True) -> Optional[dict]:
 	try:
+		close_later = False
 		if isinstance(profile_info_file, os.PathLike):
 			f = open(profile_info_file)
+			close_later = True
 		else:
 			f = profile_info_file
 		info = json.load(f)
+		if close_later:
+			f.close()
 		assert info['name'].isidentifier()
 		if convert_values:
 			info['include'] = set(map(Path, info['include'] or []))
@@ -259,7 +290,4 @@ def parse_profile_info(profile_info_file: Union[TextIO, os.PathLike], convert_va
 		if isinstance(profile_info_file, os.PathLike):
 			sys.stderr.write(f'Warning: malformed profile info at {profile_info_file}\n{str(e)} \n')
 		return None
-	finally:
-		if isinstance(profile_info_file, os.PathLike):
-			f.close()
 	

@@ -92,9 +92,17 @@ def action_list_files(argv):
 		prog='konfsave list',
 		description='Print a list of files that would be saved by \'konfsave save\'.'
 	)
+	parser.add_argument(
+		'--include', action='extend', nargs='*', metavar='FILE', default=[],
+		help='Same as in `save` or `load`.'
+	)
+	parser.add_argument(
+		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
+		help='Same as in `save` or `load`.'
+	)
 	args = parser.parse_args(argv)
 	try:
-		print('\n'.join(sorted(map(str, profiles.paths_to_save()), key=str.lower)))
+		print('\n'.join(sorted(map(str, profiles.paths_to_save(args.include, args.exclude)), key=str.lower)))
 	except ValueError as e:
 		print(str(e))
 

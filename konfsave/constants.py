@@ -17,7 +17,6 @@ CONFIG_FILENAME = 'konfsave.ini'
 PROFILE_HOME = DATA_PATH / 'profiles'
 PROFILE_INFO_FILENAME = '.konfsave_profile'
 CURRENT_PROFILE_PATH = Path.home() / PROFILE_INFO_FILENAME
-PRINT_COPYINGED_FILES = False  # Can be changed by ``config.load_config()``
 DEFAULT_CONFIG_PATH = Path(__file__).parent / 'default_config.ini'
 ARCHIVE_DIRECTORY = Path.home()
 
