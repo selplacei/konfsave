@@ -66,14 +66,13 @@ def action_info(argv):
 		else:
 			print(f'Name: {info["name"]}')
 			print(f'Stored at: {constants.PROFILE_HOME / profile}')
-			if include := info['include']:
-				print(f'Files to additionally include: \n  {_N_T.join(map(str, include))}')
-			if exclude := info['exclude']:
-				print(f'Files to exclude by default: \n  {_N_T.join(map(str, exclude))}')
+			print(f'Author: {info["author"] or "Unknown"}')
+			print(f'Supported groups: {info["groups"] or "(unspecified)"}')
+			if description := info['description']:
+				print(description)
 	else:
 		if current_profile := profiles.current_profile():
 			print(f'Current profile: {current_profile}')
-			print(f'Stored at: {constants.PROFILE_HOME / current_profile}')
 		else:
 			print(f'No profile is currently active.')
 		# Choose directories which are valid profile names and contain an info file;
@@ -179,7 +178,7 @@ def action_load(argv):
 	)
 	parser.add_argument(
 		'--no-restart', action='store_false', dest='restart',
-		help='After loading a profile, the Plasma shell is restarted, unless this flag was specified.'
+		help='After loading a profile, the Plasma shell is restarted unless this flag is specified.'
 	)
 	parser.add_argument(
 		'--include', action='extend', nargs='*', metavar='FILE', default=[],
@@ -189,7 +188,7 @@ def action_load(argv):
 	)
 	parser.add_argument(
 		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
-		help='Files to not load from the profile. This overrides values specified by the profile\'s configuration. '
+		help='Files to not load from the profile. This overrides default configuration. '
 		'Path format is the same as for --include.'
 	)
 	args = parser.parse_args(argv)
@@ -220,8 +219,7 @@ def action_load(argv):
 	
 def action_change(argv):
 	parser = argparse.ArgumentParser(
-		prog='konfsave change',
-		epilog='Paths must be specified relative to the home directory.'
+		prog='konfsave change'
 	)
 	parser.add_argument(
 		'profile', nargs='?',
@@ -230,15 +228,19 @@ def action_change(argv):
 		'if you\'d like to store new attributes as a separate profile, save the configuration under a new name first.'
 	)
 	parser.add_argument(
-		'--name', help='New name for the profile.'
+		'--name', help='New name for the profile. Changing this will also rename the profile\'s directory.'
 	)
 	parser.add_argument(
-		'--include', action='extend', nargs='*', metavar='FILE', default=[],
-		help='New set of files to save to this profile in addition to those saved by default.'
+		'--author',
+		help='New author.'
 	)
 	parser.add_argument(
-		'--exclude', action='extend', nargs='*', metavar='FILE', default=[],
-		help='New set of files to NOT save to this profile even if they\'re saved by default.'
+		'--description',
+		help='New description.'
+	)
+	parser.add_argument(
+		'--groups', action='extend', nargs='*', metavar='NAME', default=[],
+		help='New set of groups that this profile supports (don\'t include colons).'
 	)
 	args = parser.parse_args(argv)
 	results = {k: v for k, v in vars(args).items() if k != 'profile' and v}

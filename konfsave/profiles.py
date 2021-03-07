@@ -131,8 +131,9 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
-		'include': info['include'] if info else [],
-		'exclude': info['exclude'] if info else []
+		'author': info['author'] if info else None,
+		'description': info['description'] if info else None,
+		'groups': info['groups'] if info else []
 	}
 	with open(profile_dir / constants.PROFILE_INFO_FILENAME, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
@@ -279,12 +280,10 @@ def parse_profile_info(profile_info_file: Union[TextIO, os.PathLike], convert_va
 		if close_later:
 			f.close()
 		assert info['name'].isidentifier()
-		if convert_values:
-			info['include'] = set(map(Path, info['include'] or []))
-			info['exclude'] = set(map(Path, info['exclude'] or []))
-		else:
-			info['include'] = info['include'] or []
-			info['exclude'] = info['exclude'] or []
+		info['author'] = info.get('author', None)
+		info['description'] = info.get('description', None)
+		info['groups'] = info.get('groups', None)
+		# Currently, there are no values to convert.
 		return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
 		if isinstance(profile_info_file, os.PathLike):
