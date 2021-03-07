@@ -15,10 +15,12 @@ metagroups: Dict[str, Set[str]] = {}
 # Mapping of group names to the paths they contain, with sub-groups recursively broken down
 # Paths are absolute and resolved
 paths: Dict[str, Set[Path]] = {}
-# Mapping of keys to values stored in the [Defaults] section, converted to applicable types
-defaults = {
-	'save-list': []
-}
+# Set of files that should never be copied unless --included in the command line
+exceptions = set()
+# Default list of group names to save, as stored in [Defaults] -> save-list
+save_list = []
+# Whether to print filenames that are being copied during saving or loading
+print_copyinged_files = False
 
 
 def default_paths() -> Tuple[Path]:
@@ -31,7 +33,7 @@ def default_paths() -> Tuple[Path]:
 def load_config():
 	# Create the config file if missing
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
-		print('Config file missing, copying from default')
+		sys.stderr.write('Config file missing, copying from default')
 		constants.DATA_PATH.mkdir(parents=True, exist_ok=True)
 		with open(constants.DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.DEFAULT_CONFIG_PATH) as d:
 			f.write(d.read())
@@ -42,6 +44,13 @@ def load_config():
 	with open(constants.DATA_PATH / 'konfsave.ini') as f:
 		config.read_file(f)
 	
+	# Load exceptions
+	for path in itertools.chain(
+		map(lambda v: (Path.home() / Path(v)).resolve(), config['Home Directory Path Definitions'].keys()),
+		map(lambda v: (constants.CONFIG_HOME / Path(v)).resolve(), config['XDG_CONFIG_HOME Path Definitions'].keys())
+	):
+		exceptions.add(path)
+
 	# Load path definitions
 	for path, groups in itertools.chain(
 		map(lambda v: ((Path.home() / Path(v[0])).resolve(), v[1]), config['Home Directory Path Definitions'].items()),
@@ -87,4 +96,5 @@ def load_config():
 	sys.stderr.write(', '.join(sorted(undefined_groups)) + '\n')
 	
 	# Load defaults
-	defaults['save-list'] = list(config['Defaults']['save-list'].split(','))
+	save_list = list(map(lambda s: f':{s}', config['Defaults']['save-list'].split(',')))
+	print_copyinged_files = config.getboolean('Defaults', 'print-copyinged-files')
