@@ -82,6 +82,7 @@ def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]
 	"""
 	Calculate and return a set of files to save to or load from a profile.
 	Paths are returned as absolute and resolved, and point to the actual files in the home directory (never directories).
+	Directories specified in ``include``, ``exclude``, and ``default_include`` are traversed recursively.
 	
 	The optional parameters ``include`` and ``exclude`` represent overrides, typically given by the user as
 	command line arguments. They will always take priority over other configuration.
