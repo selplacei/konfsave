@@ -1,9 +1,8 @@
 import os
 import sys
 import configparser
+import logging
 from pathlib import Path
-
-from . import config
 
 
 if (_config_home := os.path.expandvars('$XDG_CONFIG_HOME')) != '$XDG_CONFIG_HOME':
@@ -19,5 +18,3 @@ PROFILE_INFO_FILENAME = '.konfsave_profile'
 CURRENT_PROFILE_PATH = Path.home() / PROFILE_INFO_FILENAME
 DEFAULT_CONFIG_PATH = Path(__file__).parent / 'default_config.ini'
 ARCHIVE_DIRECTORY = Path.home()
-
-config.load_config()  # Circular import warning: depends on DATA_PATH, CONFIG_FILENAME, DEFAULT_CONFIG_PATH

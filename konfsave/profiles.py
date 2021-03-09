@@ -1,6 +1,7 @@
 import sys
 import os
 import itertools
+import logging
 import shutil
 import json
 from pathlib import Path
@@ -10,11 +11,15 @@ from . import constants
 from . import config
 # TODO: write proper docstrings so that this can be used as a library
 
+logger = logging.getLogger('konfsave')
+
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
 	valid = name.isidentifier()
 	if (not valid) and exit_if_invalid:
-		sys.stderr.write(f'The profile name "{name}" is invalid.\n')
+		logger.critical(f'The profile name "{name}" is invalid.')
 		sys.exit(1)
+	else:
+		logger.debug(f'The profile name "{name}" is invalid.')
 	return valid
 
 
@@ -29,8 +34,7 @@ def copy_allow_samefile(*args, **kwargs):
 
 
 def copy_path(source, destination, overwrite=True, follow_symlinks=False):
-	if config.print_copyinged_files:
-		print(f'Copying {path}')
+	logger.info(f'Copying {source}')
 	destination.parent.mkdir(parents=True, exist_ok=True)
 	if source.is_dir():
 		shutil.copytree(
@@ -124,9 +128,9 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	profile_dir.mkdir(parents=True, exist_ok=True)
 	for path in map(Path, paths_to_save(include, exclude)):
 		if not path.exists():
-			sys.stderr.write(f'Warning: the path {path} doesn\'t exist. Skipping\n')
+			logger.info(f'The path {path} doesn\'t exist. Skipping')
 		elif not path.is_relative_to(Path.home()):
-			sys.stderr.write(f'Warning: the path {path} is not within the user\'s home directory. Skipping\n')
+			logger.warning(f'The path {path} is not within the user\'s home directory. Skipping')
 		else:
 			copy_path(path, profile_dir / path.relative_to(Path.home()), follow_symlinks=follow_symlinks)
 	# TODO: implement git repos in profiles
@@ -168,7 +172,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 				print('Loading aborted.')
 				return True
 		except Exception as e:
-			sys.stderr.write('Refusing to overwrite unsaved configuration\n')
+			logger.error('Refusing to overwrite unsaved configuration')
 			raise
 	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(include, exclude)):
@@ -176,7 +180,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		if source.exists():
 			copy_path(source, Path.home() / path)
 		else:
-			sys.stderr.write(f'Warning: the file {source} doesn\'t exist. Skipping\n')
+			logger.info(f'The file {source} doesn\'t exist. Skipping\n')
 	shutil.copyfile(profile_root / constants.PROFILE_INFO_FILENAME, constants.CURRENT_PROFILE_PATH)
 
 
@@ -231,7 +235,7 @@ def delete(profile, clear_active=True, confirm=True) -> bool:
 	True is returned if the user canceled the action.
 	"""
 	if not (constants.PROFILE_HOME / profile).exists():
-		sys.stderr.write(f'The profile "{profile}" doesn\'t exist.\n')
+		logger.error(f'The profile "{profile}" doesn\'t exist.\n')
 		return True
 	if confirm:
 		print(f'Warning: you\'re about to delete the profile "{profile}".')
@@ -255,7 +259,7 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 	if use_cache and profile_name in _profile_info_cache:
 		return _profile_info_cache[profile_name]
 	if profile_name and not validate_profile_name(profile_name, exit_if_invalid=False):
-		sys.stderr.write(f'Warning: "f{profile_info}" is an invalid profile name\n')
+		logger.warning(f'"f{profile_info}" is an invalid profile name\n')
 	try:
 		info = parse_profile_info(
 			(constants.PROFILE_HOME / profile_name / constants.PROFILE_INFO_FILENAME) \
@@ -288,6 +292,6 @@ def parse_profile_info(profile_info_file: Union[TextIO, os.PathLike], convert_va
 		return info
 	except (json.JSONDecodeError, KeyError, AssertionError) as e:
 		if isinstance(profile_info_file, os.PathLike):
-			sys.stderr.write(f'Warning: malformed profile info at {profile_info_file}\n{str(e)} \n')
+			logger.warning(f'Malformed profile info at {profile_info_file}\n{str(e)} \n')
 		return None
 	

@@ -1,6 +1,7 @@
 import sys
 import configparser
 import itertools
+import logging
 from pathlib import Path
 from typing import Set, Dict, List, Tuple
 
@@ -19,8 +20,6 @@ paths: Dict[str, Set[Path]] = {}
 exceptions = set()
 # Default list of group names to save, as stored in [Defaults] -> save-list
 save_list = []
-# Whether to print filenames that are being copied during saving or loading
-print_copyinged_files = False
 
 
 def default_paths() -> Tuple[Path]:
@@ -31,10 +30,10 @@ def default_paths() -> Tuple[Path]:
 
 
 def load_config():
-	global definitions, metagroups, paths, exceptions, save_list, print_copyinged_files
+	global definitions, metagroups, paths, exceptions, save_list
 	# Create the config file if missing
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
-		sys.stderr.write('Config file missing, copying from default')
+		logging.getLogger('konfsave').warning('Config file missing, copying from default')
 		constants.DATA_PATH.mkdir(parents=True, exist_ok=True)
 		with open(constants.DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.DEFAULT_CONFIG_PATH) as d:
 			f.write(d.read())
@@ -44,6 +43,16 @@ def load_config():
 	config.optionxform = str
 	with open(constants.DATA_PATH / 'konfsave.ini') as f:
 		config.read_file(f)
+	
+	# Set the logging level
+	loglevel = {
+		'DEBUG': logging.DEBUG,
+		'INFO': logging.INFO,
+		'WARNING': logging.WARNING,
+		'ERROR': logging.ERROR,
+		'CRITICAL': logging.CRITICAL
+	}[config['Defaults']['log-level'].upper()]
+	logging.basicConfig(level=loglevel)
 	
 	# Load exceptions
 	for path in itertools.chain(
@@ -91,11 +100,11 @@ def load_config():
 					subvalues += list(definitions[subvalue])
 				except KeyError:
 					undefined_groups.add(subvalue)
-					
-	# TODO: log this to debug (disable by default) - undefined groups are perfectly normal
-	sys.stderr.write(f'Warning: the following groups are referenced in metagroup definitions, but no paths are defined for them:\n')
-	sys.stderr.write(', '.join(sorted(undefined_groups)) + '\n')
+
+	logging.getLogger('konfsave').info(
+		f'The following groups are referenced in metagroup definitions, but no paths are defined for them: '
+		+ ', '.join(sorted(undefined_groups))
+	)
 	
 	# Load defaults
 	save_list = list(map(lambda s: f':{s}', config['Defaults']['save-list'].split(',')))
-	print_copyinged_files = config.getboolean('Defaults', 'print-copyinged-files')

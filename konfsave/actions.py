@@ -2,7 +2,9 @@ import sys
 import argparse
 import itertools
 import json
+import logging
 import subprocess
+import time
 import zipfile
 from pathlib import Path
 from typing import List
@@ -36,6 +38,9 @@ To learn more about how to configure Konfsave, visit the GitHub wiki at
 or download it locally:
   `git clone https://github.com/selplacei/konfsave.wiki.git`
 '''
+logger = logging.getLogger('konfsave')
+
+
 def parse_arguments(argv):
 	# Actions need to parsed separately because each action has its own
 	# argument format, so different ArgumentParser objects have to be used.
@@ -56,9 +61,9 @@ def parse_arguments(argv):
 			('u', 'unarchive'): action_unarchive
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
-		sys.stderr.write(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
+		logger.error(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
 	except KeyboardInterrupt:
-		sys.stderr.write('Action cancelled.')
+		print('Action cancelled.')
 	
 
 def action_info(argv):
@@ -159,7 +164,7 @@ def action_list_groups(argv):
 		print(json.dumps(data))
 	else:
 		if args.available >= 2:
-			print('Available groups:')
+			print('All available groups:')
 		elif args.available == 1:
 			print('Available metagroups:')
 		else:
@@ -278,25 +283,27 @@ def action_load(argv):
 	if success:
 		if args.restart:
 			subprocess.run(['sh', '-c', 'plasmashell --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-			print('Plasma shell restarted')
+			print('Restarting Plasma shell...')
 			try:
 				# Check if Kwin is running
 				subprocess.run(['ps', '-C', 'kwin_x11'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			except subprocess.CalledProcessError:
-				print('No running instance of Kwin detected')
+				logger.info('No running instance of Kwin detected')
 			else:
 				# If so, restart Kwin
+				time.sleep(3)  # Allow plasmashell to completely restart
+				print('Restarting Kwin...')
 				subprocess.run(['sh', '-c', 'kwin_x11 --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-				print('Kwin restarted')
 			try:
 				# Check if Latte Dock is running
 				subprocess.run(['ps', '-C', 'latte-dock'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 			except subprocess.CalledProcessError:
-				print('No running instance of Latte detected')
+				logger.info('No running instance of Latte detected')
 			else:
 				# If so, restart Latte Dock
+				time.sleep(5)  # Allow plasmashell and kwin to completely restart
+				print('Restarting Latte...')
 				subprocess.run(['sh', '-c', 'latte-dock --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-				print('Latte restarted')
 		print('Success')
 	
 	
@@ -392,12 +399,12 @@ def action_archive(argv):
 			compression=compression
 		)
 	except FileExistsError as e:
-		sys.stderr.write(f'The file {e.filename} already exists.\n')
+		logger.error(f'The file {e.filename} already exists.\n')
 	except RuntimeError as e:
-		sys.stderr.write(f'Error: {str(e)}\n')
+		logger.error(f'Error: {str(e)}\n')
 	else:
 		return
-	sys.stderr.write(f'Archiving "{args.profile}" failed.')
+	logger.critical(f'Archiving "{args.profile}" failed.')
 
 
 def action_unarchive(argv):

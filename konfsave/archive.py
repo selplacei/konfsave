@@ -1,4 +1,5 @@
 import sys
+import logging
 import zipfile
 import shutil
 import json
@@ -6,6 +7,8 @@ from pathlib import Path
 
 from . import constants
 from . import profiles
+
+logger = logging.getLogger('konfsave')
 
 
 def archive_profile(profile, destination: Path = None, overwrite=False, compression=zipfile.ZIP_BZIP2, compresslevel=9):
@@ -51,7 +54,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		with zipf.open(constants.PROFILE_INFO_FILENAME) as infof:
 			info = profiles.parse_profile_info(infof, convert_values=False)
 			if info is None:
-				sys.stderr.write(f'Warning: the archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n')
+				logger.warning(f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n')
 				if new_name is None:
 					raise ValueError(f'Could not infer the destination profile name for archive {source}.')
 			if new_name:
@@ -82,7 +85,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 					# Create a backup, which will be deleted if all of the next steps are successful.
 					backup = Path(str(destination) + '.bkp')
 					if backup.exists():
-						sys.stderr.write(f'Warning: the backup {backup} already exists. It will be overwritten.\n')
+						logger.warning(f'Warning: the backup {backup} already exists. It will be overwritten.\n')
 						shutil.rmtree(backup)  # Path.rename() fails if the directory is not empty
 					destination.rename(str(destination) + '.bkp')
 			else:
@@ -92,10 +95,9 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 			with open(destination / constants.PROFILE_INFO_FILENAME, 'w') as f:
 				f.write(json.dumps(info))  # Write only after JSON serialization is successful
 		except Exception as e:
-			sys.stderr.write(f'Error: unarchiving failed.\n')
+			logger.exception(f'Unarchiving failed.\n')
 			if backup:
-				sys.stderr.write(f'The previous version of "{info["name"]}" was backed up to {destination}\n')
-			raise
+				logger.warning(f'The previous version of "{info["name"]}" was backed up to {destination}\n')
 		else:
 			if backup:
 				shutil.rmtree(backup)
