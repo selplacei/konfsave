@@ -22,8 +22,8 @@ def archive_profile(profile, destination: Path = None, overwrite=False, compress
 	info = profiles.profile_info(profile)
 	if info is None:
 		raise RuntimeError(f'The directory {profile_dir} is not a valid Konfsave profile.')
-	profile_dir = constants.KONFSAVE_PROFILE_HOME / profile
-	destination = destination or (constants.KONFSAVE_ARCHIVE_DIRECTORY / (info['name'] + '.konfsave.zip'))
+	profile_dir = constants.PROFILE_HOME / profile
+	destination = destination or (constants.ARCHIVE_DIRECTORY / (info['name'] + '.konfsave.zip'))
 	with zipfile.ZipFile(destination, mode=open_mode, compression=compression, compresslevel=compresslevel) as zipf:
 		print(f'Archiving "{profile}" into {destination}...')
 		for source in profile_dir.glob('**/*'):
@@ -48,10 +48,10 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 	If the original archive has no information file and ``new_name`` is unspecified, ValueError will be raised.
 	"""
 	with zipfile.ZipFile(source) as zipf:
-		with zipf.open(constants.KONFSAVE_PROFILE_INFO_FILENAME) as infof:
+		with zipf.open(constants.PROFILE_INFO_FILENAME) as infof:
 			info = profiles.parse_profile_info(infof, convert_values=False)
 			if info is None:
-				sys.stderr.write(f'Warning: the archive {source} has a malformed {constants.KONFSAVE_PROFILE_INFO_FILENAME}.\n')
+				sys.stderr.write(f'Warning: the archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n')
 				if new_name is None:
 					raise ValueError(f'Could not infer the destination profile name for archive {source}.')
 			if new_name:
@@ -69,7 +69,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		) != 'y':
 			print('Unarchiving aborted.')
 			return True
-		destination = constants.KONFSAVE_PROFILE_HOME / info['name']
+		destination = constants.PROFILE_HOME / info['name']
 		backup = None
 		if destination.exists() and not overwrite:
 			if confirm:
@@ -88,8 +88,8 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 			else:
 				raise FileExistsError(filename=str(destination))
 		try:
-			zipf.extractall(destination, members=(p for p in zipf.namelist() if p != constants.KONFSAVE_PROFILE_INFO_FILENAME))
-			with open(destination / constants.KONFSAVE_PROFILE_INFO_FILENAME, 'w') as f:
+			zipf.extractall(destination, members=(p for p in zipf.namelist() if p != constants.PROFILE_INFO_FILENAME))
+			with open(destination / constants.PROFILE_INFO_FILENAME, 'w') as f:
 				f.write(json.dumps(info))  # Write only after JSON serialization is successful
 		except Exception as e:
 			sys.stderr.write(f'Error: unarchiving failed.\n')
