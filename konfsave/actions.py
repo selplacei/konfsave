@@ -36,7 +36,7 @@ All flags starting with '--' can be abbreviated.
 To learn more about how to configure Konfsave, visit the GitHub wiki at
   https://github.com/selplacei/konfsave/wiki
 or download it locally:
-  `git clone https://github.com/selplacei/konfsave.wiki.git`
+  git clone https://github.com/selplacei/konfsave.wiki.git
 '''
 logger = logging.getLogger('konfsave')
 
