@@ -5,7 +5,7 @@ import logging
 import shutil
 import json
 from pathlib import Path
-from typing import Optional, Set, Union, TextIO
+from typing import Optional, Set, Union, TextIO, Iterable
 
 from . import constants
 from . import config
@@ -227,15 +227,27 @@ def rename(source, result, change_info=True):
 	(constants.PROFILE_HOME / source).rename(constants.PROFILE_HOME / result)
 
 
-def delete(profile, clear_active=True, confirm=True) -> bool:
+def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) -> bool:
 	"""
+	``profile`` may be a string specifying a single profile to delete, or a list of profiles.
+	
 	If ``clear_active`` is True and the deleted profile has the same name as the active profile,
 	the active profile info will be deleted as well. Current configuration will be unaffected.
 	
 	True is returned if the user canceled the action.
 	"""
+	if not isinstance(profile, str):
+		_profile_list = ', '.join(map(lambda n: f'"{n}"', profile))
+		if confirm:
+			print(f'Warning: you\'re about to delete the profiles {_profile_list}.')
+			if input('Are you sure you want to permanently delete all of them? [y/N]: ') != 'y':
+				print('Deleting aborted.')
+				return True
+		for prf in profile:
+			delete(prf, clear_active=clear_active, confirm=False)
+		return
 	if not (constants.PROFILE_HOME / profile).exists():
-		logger.error(f'The profile "{profile}" doesn\'t exist.\n')
+		logger.error(f'The profile "{profile}" doesn\'t exist.')
 		return True
 	if confirm:
 		print(f'Warning: you\'re about to delete the profile "{profile}".')

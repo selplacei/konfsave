@@ -338,23 +338,26 @@ def action_change(argv):
 		profiles.change(results, args.profile)
 		print('Success')
 	else:
-		print('Nothing to change')
+		parser.print_help()
 
 
 def action_delete(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave delete',
-		description='Delete a profile. Current system configuration will be unchanged; '
-		'however, if the deleted profile is active, there will no longer be an active profile.'
+		description='Delete profile(s). Current system configuration will be unchanged; '
+		'however, if a deleted profile is active, there will no longer be an active profile.'
 	)
 	parser.add_argument(
-		'profile', help='The profile to delete.'
+		'profile', action='extend', nargs='*', help='The profile(s) to delete.'
 	)
 	parser.add_argument('--noconfirm', action='store_false', dest='confirm')
 	args = parser.parse_args(argv)
-	success = not profiles.delete(args.profile, confirm=args.confirm)
-	if success:
-		print('Success')
+	if args.profile:
+		success = not profiles.delete(args.profile, confirm=args.confirm)
+		if success:
+			print('Done')
+	else:
+		parser.print_help()
 
 
 def action_archive(argv):
