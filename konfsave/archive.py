@@ -63,11 +63,9 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 				profiles.validate_profile_name(info['name'])
 		if confirm and input(
 			'Warning: you\'re about to extract a profile that may have been created by someone else.\n'
-			'Konfsave profiles can contain any file within the home directory, not just KDE configurations.\n'
+			'Konfsave profiles can contain any file within the home directory, not just configurations.\n'
 			'Unarchiving a profile will not load it; however, loading profiles from untrusted sources\n'
 			'may have destructive consequences, including unintentionally overwriting personal data.\n'
-			'Keep in mind that individual profiles can have their own list of files to include, '
-			'and those are loaded even if they\'re not included in your config.ini.\n'
 			'Have you manually gone through the archive and made sure that every file is expected? [y/N]: '
 		) != 'y':
 			print('Unarchiving aborted.')
