@@ -116,6 +116,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	The name is not validated in this function.
 	
 	If ``name`` is unspecified, the current profile's name is used.
+	Otherwise, the current profile will be switched to the result.
 	``include`` and ``exclude`` must be given in the same format as to ``paths_to_save()``.
 	"""
 	info = profile_info(name, convert_values=False)
@@ -133,7 +134,6 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 			logger.warning(f'The path {path} is not within the user\'s home directory. Skipping')
 		else:
 			copy_path(path, profile_dir / path.relative_to(Path.home()), follow_symlinks=follow_symlinks)
-	# TODO: implement git repos in profiles
 	new_info = {
 		'name': name,
 		'author': info['author'] if info else None,
@@ -141,6 +141,8 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 		'groups': info['groups'] if info else []
 	}
 	with open(profile_dir / constants.PROFILE_INFO_FILENAME, 'w') as f:
+		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
+	with open(constants.CURRENT_PROFILE_PATH, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 
 
@@ -234,18 +236,25 @@ def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) 
 	If ``clear_active`` is True and the deleted profile has the same name as the active profile,
 	the active profile info will be deleted as well. Current configuration will be unaffected.
 	
-	True is returned if the user canceled the action.
+	True is returned if the user canceled the action, or if it is otherwise unsuccessful.
 	"""
 	if not isinstance(profile, str):
-		_profile_list = ', '.join(map(lambda n: f'"{n}"', profile))
-		if confirm:
-			print(f'Warning: you\'re about to delete the profiles {_profile_list}.')
-			if input('Are you sure you want to permanently delete all of them? [y/N]: ') != 'y':
-				print('Deleting aborted.')
-				return True
-		for prf in profile:
-			delete(prf, clear_active=clear_active, confirm=False)
-		return
+		profile = list(profile)
+		if len(profile) > 1:
+			_profile_list = ', '.join(map(lambda n: f'"{n}"', profile))
+			if confirm:
+				print(f'Warning: you\'re about to delete the profiles {_profile_list}.')
+				if input('Are you sure you want to permanently delete all of them? [y/N]: ') != 'y':
+					print('Deleting aborted.')
+					return True
+			for prf in profile:
+				delete(prf, clear_active=clear_active, confirm=False)
+			return
+		elif len(profile) == 1:
+			profile = profile[0]
+		else:
+			logger.error('The list of profiles to delete is empty.')
+			return True
 	if not (constants.PROFILE_HOME / profile).exists():
 		logger.error(f'The profile "{profile}" doesn\'t exist.')
 		return True
@@ -257,6 +266,7 @@ def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) 
 	if clear_active and profile == current_profile():
 		constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	shutil.rmtree(constants.PROFILE_HOME / profile)
+	print(f'Deleted profile "{profile}"')
 
 
 _profile_info_cache = {}
