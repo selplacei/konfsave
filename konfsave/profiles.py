@@ -96,9 +96,9 @@ def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]
 	
 	``include``, ``exclude``, and ``default_include`` must be given either as absolute paths (os.PathLike) or groups (starting with a colon).
 	"""
-	include = {*itertools.chain(map(resolve_group, include or ()))}
+	include = {*itertools.chain.from_iterable(map(resolve_group, include or ()))}
 	include = {*itertools.chain.from_iterable(map(expand_path, include))}
-	exclude = {*itertools.chain(map(resolve_group, exclude or ()))}
+	exclude = {*itertools.chain.from_iterable(map(resolve_group, exclude or ()))}
 	exclude = {*itertools.chain.from_iterable(map(expand_path, exclude))}
 	for exception in itertools.chain.from_iterable(map(expand_path, config.exceptions)):
 		if exception not in include:
