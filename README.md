@@ -6,23 +6,13 @@ and then load them by name. It's also possible to take these profiles somewhere 
 
 By default, Konfsave manages your KDE configuration - specifically, its appearance and workspace settings. This can be easily changed in `config.ini`.
 If you'd like to learn more about how to adjust the configuration, see the [wiki](https://github.com/selplacei/konfsave/wiki).
+You can also specify additional files to include or exclude once using command line options.
 
 Inspired by https://github.com/Prayag2/konsave.
 
-## Notable features
-
-- Storing the current configuration as a profile
-- Adding extra info to profiles, e.g. a description
-- Optionally following symlinks
-- Remembering which profile is active at the moment
-- Updating existing profiles
-- Listing and configuring paths or groups of paths to save
-- Specifying additional paths to include or exclude using command-line arguments
-- Archiving (exporting) and importing profiles (with adjustable compression level and type)
-
 ## Requirements
 
-Python 3.8+ is required.
+Python 3.8+ is required. On some systems, this means that you must use `python3` instead of `python`.
 
 ## Installation & Usage
 
@@ -46,8 +36,8 @@ Unlike the PyPI method, this will not allow you to easily update the program.
 
 ## Future features
 
-- Specifying a profile type - for example, a profile of type 'gtk' will only save and load GTK configs by default - this will extend Konfsave beyond KDE
-- Optionally storing profiles as Git repositories
+- Standardizing groups so that someone else's profile can specify what it supports
+- Optionally storing profiles as Git repositories and syncing them using remotes
 
 ## License
 
