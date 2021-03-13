@@ -2,6 +2,7 @@ import sys
 import configparser
 import itertools
 import logging
+import sys
 from pathlib import Path
 from typing import Set, Dict, List, Tuple
 
@@ -131,10 +132,20 @@ def load_config():
 	
 	# Load defaults
 	save_list = list(map(lambda s: f':{s}', config['Defaults']['save-list'].split(',')))
-	profile_home = Path(config['Defaults']['profile-home'])
-	profile_info_filename = config['Defaults']['profile-info-filename']
-	current_profile_path = Path(config['Defaults']['current-profile-path'])
-	archive_directory = Path(config['Defaults']['archive-directory'])
+	try:
+		profile_home = Path(config['Defaults']['profile-home'])
+		profile_info_filename = config['Defaults']['profile-info-filename']
+		current_profile_path = Path(config['Defaults']['current-profile-path'])
+		archive_directory = Path(config['Defaults']['archive-directory'])
+	except KeyError:
+		logging.getLogger('konfsave').critical(
+			'Important values are missing from the config file. Did you recently update Konfsave?\n'
+			'The following keys are expected in the Defaults section:\n'
+			'profile-home, profile-info-filename, current-profile-path, archive-directory\n'
+			f'See {str(constants.DEFAULT_CONFIG_PATH)} for example configuration,\nor simply delete '
+			f'{str(constants.DATA_PATH / constants.CONFIG_FILENAME)} to reset the configuration completely.'
+		)
+		sys.exit(1)
 
 
 class _SpecialExtendedInterpolation(configparser.ExtendedInterpolation):
