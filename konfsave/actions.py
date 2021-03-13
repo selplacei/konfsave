@@ -278,32 +278,10 @@ def action_load(argv):
 		args.profile,
 		include,
 		exclude,
-		overwrite_unsaved_configuration=args.overwrite
+		overwrite_unsaved_configuration=args.overwrite,
+		restart=args.restart
 	)
 	if success:
-		if args.restart:
-			subprocess.run(['sh', '-c', 'plasmashell --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-			print('Restarting Plasma shell...')
-			try:
-				# Check if Kwin is running
-				subprocess.run(['ps', '-C', 'kwin_x11'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-			except subprocess.CalledProcessError:
-				logger.info('No running instance of Kwin detected')
-			else:
-				# If so, restart Kwin
-				time.sleep(3)  # Allow plasmashell to completely restart
-				print('Restarting Kwin...')
-				subprocess.run(['sh', '-c', 'kwin_x11 --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-			try:
-				# Check if Latte Dock is running
-				subprocess.run(['ps', '-C', 'latte-dock'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-			except subprocess.CalledProcessError:
-				logger.info('No running instance of Latte detected')
-			else:
-				# If so, restart Latte Dock
-				time.sleep(5)  # Allow plasmashell and kwin to completely restart
-				print('Restarting Latte...')
-				subprocess.run(['sh', '-c', 'latte-dock --replace & disown'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 		print('Success')
 	
 	

@@ -4,6 +4,8 @@ import itertools
 import logging
 import shutil
 import json
+import subprocess
+import time
 from pathlib import Path
 from typing import Optional, Set, Union, TextIO, Iterable
 
@@ -146,7 +148,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 
 
-def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False) -> bool:
+def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False, restart=True) -> bool:
 	"""
 	The name is not validated in this function.
 	True is returned if the user canceled the action.
@@ -176,6 +178,20 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		except Exception as e:
 			logger.error('Refusing to overwrite unsaved configuration')
 			raise
+	if restart:
+		restart_list = []
+		subprocess.run(
+			['kquitapp5', 'plasmashell'],
+			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+		)
+		try:
+			# Check if Latte Dock is running
+			subprocess.run(['ps', '-C', 'latte-dock'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		except subprocess.CalledProcessError:
+			logger.info('No running instance of Latte detected')
+		else:
+			subprocess.run(['kquitapp5', 'lattedock'])
+			restart_list.append('latte-dock')
 	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
 	for path in map(lambda p: Path(p).relative_to(Path.home()), paths_to_save(include, exclude)):
 		source = profile_root / path
@@ -184,6 +200,25 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		else:
 			logger.info(f'The file {source} doesn\'t exist. Skipping\n')
 	shutil.copyfile(profile_root / constants.PROFILE_INFO_FILENAME, constants.CURRENT_PROFILE_PATH)
+	if restart:
+		subprocess.run(
+			['kstart5', 'plasmashell'],
+			stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+		)
+		try:
+			# Check if Kwin is running
+			subprocess.run(['ps', '-C', 'kwin_x11'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		except subprocess.CalledProcessError:
+			logger.info('No running instance of KWin detected')
+		else:
+			# If so, reload Kwin
+			subprocess.run(
+				['dbus-send', '--session', '--dest=org.kde.KWin', '/KWin', 'org.kde.KWin.reloadConfig'],
+				stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+			)
+		if 'latte-dock' in restart_list:
+			time.sleep(3)  # Allow KWin to completely restart
+			subprocess.run(['kstart5', 'latte-dock'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def change(results, profile=None):
