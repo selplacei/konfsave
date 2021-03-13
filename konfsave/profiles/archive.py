@@ -52,9 +52,13 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		with zipf.open(constants.PROFILE_INFO_FILENAME) as infof:
 			info = profiles.parse_profile_info(infof, convert_values=False)
 			if info is None:
-				profiles.logger.warning(f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n')
+				profiles.logger.warning(
+					f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n'
+				)
 				if new_name is None:
-					raise ValueError(f'Could not infer the destination profile name for archive {source}.')
+					raise ValueError(
+						f'Could not infer the destination profile name for archive {source}.'
+					)
 			if new_name:
 				info['name'] = new_name
 			else:
@@ -73,7 +77,8 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		if destination.exists() and not overwrite:
 			if confirm:
 				if input(
-					f'Warning: the profile "{info["name"]}" is already saved.\nAre you sure you want to overwrite it? [y/N]: '
+					f'Warning: the profile "{info["name"]}" is already saved.\n'
+					'Are you sure you want to overwrite it? [y/N]: '
 				) != 'y':
 					print('Unarchiving aborted.')
 					return True
@@ -81,19 +86,26 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 					# Create a backup, which will be deleted if all of the next steps are successful.
 					backup = Path(str(destination) + '.bkp')
 					if backup.exists():
-						profiles.logger.warning(f'Warning: the backup {backup} already exists. It will be overwritten.\n')
+						profiles.logger.warning(
+							f'Warning: the backup {backup} already exists. It will be overwritten.\n'
+						)
 						shutil.rmtree(backup)  # Path.rename() fails if the directory is not empty
 					destination.rename(str(destination) + '.bkp')
 			else:
 				raise FileExistsError(filename=str(destination))
 		try:
-			zipf.extractall(destination, members=(p for p in zipf.namelist() if p != constants.PROFILE_INFO_FILENAME))
+			zipf.extractall(
+				destination,
+				members=(p for p in zipf.namelist() if p != constants.PROFILE_INFO_FILENAME)
+			)
 			with open(destination / constants.PROFILE_INFO_FILENAME, 'w') as f:
 				f.write(json.dumps(info))  # Write only after JSON serialization is successful
 		except Exception as e:
 			profiles.logger.exception(f'Unarchiving failed.\n')
 			if backup:
-				profiles.logger.warning(f'The previous version of "{info["name"]}" was backed up to {destination}\n')
+				profiles.logger.warning(
+					f'The previous version of "{info["name"]}" was backed up to {destination}\n'
+				)
 		else:
 			if backup:
 				shutil.rmtree(backup) 

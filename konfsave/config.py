@@ -9,7 +9,7 @@ from . import constants  # Circular import warning: don't interact outside of fu
 
 # The values referred to as "group names" include the preceding colon.
 
-# Mapping of group names to what they contain, exactly as specified in the config (including "!" paths)
+# Mapping of group names to what they contain, exactly as specified in the config
 definitions: Dict[str, Set[str]] = {}
 # Same as ``definitions``, but only contains metagroups (including redefined groups)
 metagroups: Dict[str, Set[str]] = {}
@@ -35,7 +35,10 @@ def load_config():
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
 		logging.getLogger('konfsave').warning('Config file missing, copying from default')
 		constants.DATA_PATH.mkdir(parents=True, exist_ok=True)
-		with open(constants.DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.DEFAULT_CONFIG_PATH) as d:
+		with (
+			open(constants.DATA_PATH / 'konfsave.ini', 'w') as f,
+			open(constants.DEFAULT_CONFIG_PATH) as d
+		):
 			f.write(d.read())
 
 	# Load the config file
@@ -56,15 +59,27 @@ def load_config():
 	
 	# Load exceptions
 	for path in itertools.chain(
-		map(lambda v: (Path.home() / Path(v)).resolve(), config['Home Directory Exceptions'].keys()),
-		map(lambda v: (constants.CONFIG_HOME / Path(v)).resolve(), config['XDG_CONFIG_HOME Exceptions'].keys())
+		map(
+			lambda v: (Path.home() / Path(v)).resolve(),
+			config['Home Directory Exceptions'].keys()
+		),
+		map(
+			lambda v: (constants.CONFIG_HOME / Path(v)).resolve(),
+			config['XDG_CONFIG_HOME Exceptions'].keys()
+		)
 	):
 		exceptions.add(path)
 
 	# Load path definitions
 	for path, groups in itertools.chain(
-		map(lambda v: ((Path.home() / Path(v[0])).resolve(), v[1]), config['Home Directory Path Definitions'].items()),
-		map(lambda v: ((constants.CONFIG_HOME / Path(v[0])).resolve(), v[1]), config['XDG_CONFIG_HOME Path Definitions'].items())
+		map(
+			lambda v: ((Path.home() / Path(v[0])).resolve(), v[1]),
+			config['Home Directory Path Definitions'].items()
+		),
+		map(
+			lambda v: ((constants.CONFIG_HOME / Path(v[0])).resolve(), v[1]),
+			config['XDG_CONFIG_HOME Path Definitions'].items()
+		)
 	):
 		for group in groups.split(','):
 			definitions.setdefault(f':{group}', set()).add(path)
@@ -76,7 +91,9 @@ def load_config():
 			try:
 				metagroups[f':{metagroup}'] = definitions[f':{metagroup}']
 			except KeyError as e:
-				raise ValueError(f'Attempted to redefine "{metagroup}" as a metagroup, but that group doesn\'t exist.') from e
+				raise ValueError(
+					f'Attempted to redefine "{metagroup}" as a metagroup, but that group doesn\'t exist.'
+				) from e
 		else:
 			# Creation of a new metagroup
 			subgroups = set(map(lambda s: f':{s}', subgroups.split(',')))
@@ -102,7 +119,7 @@ def load_config():
 					undefined_groups.add(subvalue)
 
 	logging.getLogger('konfsave').info(
-		f'The following groups are referenced in metagroup definitions, but no paths are defined for them: '
+		f'The following groups are referenced in metagroup definitions, but are not defined: '
 		+ ', '.join(sorted(undefined_groups))
 	)
 	

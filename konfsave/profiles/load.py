@@ -26,12 +26,22 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 			current_info = profiles.profile_info()
 			assert (profile_root / constants.PROFILE_INFO_FILENAME).is_file()
 			if current_info is None:
-				print('Warning: there is no active profile, and the current configuration is NOT SAVED.')
+				print(
+					'Warning: there is no active profile, and the current configuration is NOT SAVED.'
+				)
 			elif current_info['name'] != name:
-				print('Warning: you\'re loading a new profile. Konfsave cannot check if the currently active profile has been updated with current files.')
+				print(
+					'Warning: you\'re loading a new profile. Konfsave cannot check if the currently'
+					'active profile has been updated with current files.'
+				)
 			else:
-				print('Warning: you\'re overwriting the current profile with existing configuration. Konfsave cannot check if the saved files are up-to-date.')
-			if input('Are you sure you want to overwrite the current system configuration? [y/N]: ').lower() != 'y':
+				print(
+					'Warning: you\'re overwriting the current profile with existing configuration.'
+					'Konfsave cannot check if the saved files are up-to-date.'
+				)
+			if input(
+				'Are you sure you want to overwrite the current system configuration? [y/N]: '
+			).lower() != 'y':
 				print('Loading aborted.')
 				return True
 		except Exception as e:
@@ -45,14 +55,20 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		)
 		try:
 			# Check if Latte Dock is running
-			subprocess.run(['ps', '-C', 'latte-dock'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			subprocess.run(
+				['ps', '-C', 'latte-dock'],
+				check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+			)
 		except subprocess.CalledProcessError:
 			profiles.logger.info('No running instance of Latte detected')
 		else:
 			subprocess.run(['kquitapp5', 'lattedock'])
 			restart_list.append('latte-dock')
 	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
-	for path in map(lambda p: Path(p).relative_to(Path.home()), profiles.paths_to_save(include, exclude)):
+	for path in map(
+		lambda p: Path(p).relative_to(Path.home()),
+		profiles.paths_to_save(include, exclude)
+	):
 		source = profile_root / path
 		if source.exists():
 			profiles.copy_path(source, Path.home() / path)
@@ -66,7 +82,10 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		)
 		try:
 			# Check if Kwin is running
-			subprocess.run(['ps', '-C', 'kwin_x11'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			subprocess.run(
+				['ps', '-C', 'kwin_x11'],
+				check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+			)
 		except subprocess.CalledProcessError:
 			profiles.logger.info('No running instance of KWin detected')
 		else:
@@ -77,4 +96,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 			)
 		if 'latte-dock' in restart_list:
 			time.sleep(3)  # Allow KWin to completely restart
-			subprocess.run(['kstart5', 'latte-dock'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) 
+			subprocess.run(
+				['kstart5', 'latte-dock'],
+				stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+			) 

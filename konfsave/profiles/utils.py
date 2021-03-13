@@ -83,16 +83,19 @@ def expand_path(path) -> Set[Path]:
 def paths_to_save(include=None, exclude=None, default_include=None) -> Set[Path]:
 	"""
 	Calculate and return a set of files to save to or load from a profile.
-	Paths are returned as absolute and resolved, and point to the actual files in the home directory (never directories).
-	Directories specified in ``include``, ``exclude``, and ``default_include`` are traversed recursively.
+	Paths are returned as absolute and resolved,
+	and point to the actual files in the home directory (never to directories).
+	Directories specified in ``include``, ``exclude``, and
+	``default_include`` are traversed recursively.
 	
-	The optional parameters ``include`` and ``exclude`` represent overrides, typically given by the user as
-	command line arguments. They will always take priority over other configuration.
-	The optional parameter ``default_include`` represents a list of default paths to include, and is typically not specified.
-	If it is None, the list is read from the config's save-list.
+	The optional parameters ``include`` and ``exclude`` represent overrides, typically given by
+	the user as command line arguments. They will always take priority over other configuration.
+	The optional parameter ``default_include`` represents a list of default paths to include,
+	and is typically not specified. If it is None, the list is read from the config's save-list.
 	If it is an empty iterator, only values specified in ``include`` and ``exclude`` are considered.
 	
-	``include``, ``exclude``, and ``default_include`` must be given either as absolute paths (os.PathLike) or groups (starting with a colon).
+	``include``, ``exclude``, and ``default_include`` must be given either as
+	absolute paths (os.PathLike) or groups (starting with a colon).
 	"""
 	include = {*itertools.chain.from_iterable(map(resolve_group, include or ()))}
 	include = {*itertools.chain.from_iterable(map(expand_path, include))}
