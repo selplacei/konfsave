@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from konfsave import constants
+from konfsave import config
 from konfsave import profiles
 
 
@@ -22,7 +22,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 			)
 		else:
 			name = info['name']
-	profile_dir = (constants.PROFILE_HOME / name) if destination is None else destination
+	profile_dir = (config.profile_home / name) if destination is None else destination
 	profile_dir.mkdir(parents=True, exist_ok=True)
 	for path in map(Path, profiles.paths_to_save(include, exclude)):
 		if not path.exists():
@@ -37,7 +37,7 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 		'description': info['description'] if info else None,
 		'groups': info['groups'] if info else []
 	}
-	with open(profile_dir / constants.PROFILE_INFO_FILENAME, 'w') as f:
+	with open(profile_dir / config.profile_info_filename, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
-	with open(constants.CURRENT_PROFILE_PATH, 'w') as f:
+	with open(config.current_profile_path, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful 

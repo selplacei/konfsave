@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Set, Dict, List, Tuple
 
-from . import constants  # Circular import warning: don't interact outside of functions
+from . import constants
 
 # The values referred to as "group names" include the preceding colon.
 
@@ -20,6 +20,10 @@ paths: Dict[str, Set[Path]] = {}
 exceptions = set()
 # Default list of group names to save, as stored in [Defaults] -> save-list
 save_list = []
+profile_home: Path = None
+profile_info_filename: str = None
+current_profile_path: Path = None
+archive_directory: Path = None
 
 
 def default_paths() -> Tuple[Path]:
@@ -30,7 +34,8 @@ def default_paths() -> Tuple[Path]:
 
 
 def load_config():
-	global definitions, metagroups, paths, exceptions, save_list
+	global definitions, metagroups, paths, exceptions, save_list, profile_home
+	global profile_info_filename, current_profile_path, archive_directory
 	# Create the config file if missing
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
 		logging.getLogger('konfsave').warning('Config file missing, copying from default')
@@ -42,7 +47,7 @@ def load_config():
 			f.write(d.read())
 
 	# Load the config file
-	config = configparser.ConfigParser(allow_no_value=True)
+	config = configparser.ConfigParser(allow_no_value=True, interpolation=_SpecialExtendedInterpolation())
 	config.optionxform = str
 	with open(constants.DATA_PATH / 'konfsave.ini') as f:
 		config.read_file(f)
@@ -126,3 +131,29 @@ def load_config():
 	
 	# Load defaults
 	save_list = list(map(lambda s: f':{s}', config['Defaults']['save-list'].split(',')))
+	profile_home = Path(config['Defaults']['profile-home'])
+	profile_info_filename = config['Defaults']['profile-info-filename']
+	current_profile_path = Path(config['Defaults']['current-profile-path'])
+	archive_directory = Path(config['Defaults']['archive-directory'])
+
+
+class _SpecialExtendedInterpolation(configparser.ExtendedInterpolation):
+	"""
+	Identical to ``ExtendedInterpolation``, but also recognizes the following values:
+		HOME
+		CONFIG_HOME
+		DATA_PATH
+	which are identical to those stored in the ``constants`` module.
+	"""
+	def before_get(self, parser, section, option, value, defaults):
+		return super().before_get(
+			parser, section, option,
+			value.replace(
+				'${HOME}', str(Path.home())
+			).replace(
+				'${CONFIG_HOME}', str(constants.CONFIG_HOME)
+			).replace(
+				'${DATA_PATH}', str(constants.DATA_PATH)
+			),
+			defaults
+		)

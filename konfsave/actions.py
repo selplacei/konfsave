@@ -79,7 +79,7 @@ def action_info(argv):
 			print(f'The profile {profile} doesn\'t exist.')
 		else:
 			print(f'Name: {info["name"]}')
-			print(f'Stored at: {constants.PROFILE_HOME / profile}')
+			print(f'Stored at: {config.profile_home / profile}')
 			print(f'Author: {info["author"] or "Unknown"}')
 			print(f'Supported groups: {info["groups"] or "(unspecified)"}')
 			if description := info['description']:
@@ -98,8 +98,8 @@ def action_info(argv):
 			map(
 				lambda q: q.name,
 				filter(
-					lambda p: (p / constants.PROFILE_INFO_FILENAME).exists(),
-					constants.PROFILE_HOME.glob('*')
+					lambda p: (p / config.profile_info_filename).exists(),
+					config.profile_home.glob('*')
 				)
 			)
 		), key=str.lower):
@@ -135,12 +135,12 @@ def action_list_groups(argv):
 	)
 	parser.add_argument(
 		'--available', '-a', action='count', default=0,
-		help='If supplied once, print all available metagroups instead of just those enabled by default.'
+		help='If supplied once, print all available metagroups instead of just those enabled by default. '
 		'If supplied twice, print all available groups.'
 	)
 	parser.add_argument(
 		'--verbose', '-v', action='count', default=0,
-		help='List the contents of groups. If supplied twice, break down sub-groups into paths.'
+		help='List the contents of groups. If supplied twice, break down sub-groups into paths. '
 		'If supplied thrice, also expand directories into the files they contain.'
 	)
 	parser.add_argument(
@@ -190,40 +190,40 @@ def action_save(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave save',
 		# The default usage string puts "[name]" at the end, for some reason.
-		usage='konfsave save [-h] [name] [--destination DEST] [--follow-symlinks]'
+		usage='konfsave save [-h] [name] [--destination DEST] [--follow-symlinks] '
 		'[--include [FILE ...]] [--exclude [FILE ...]]'
 	)
 	parser.add_argument(
 		'profile', metavar='name', nargs='?', default=profiles.current_profile(),
-		help='Save as the specified profile instead of using the currently loaded name.'
+		help='Save as the specified profile instead of using the currently loaded name. '
 		'This is required if no profile is active.'
 	)
 	parser.add_argument(
 		'--destination', '-d', metavar='DEST', type=Path,
-		help='Instead of saving to Konfsave\'s profile storage, save to a specified destination.'
+		help='Instead of saving to Konfsave\'s profile storage, save to a specified destination. '
 	)
 	parser.add_argument(
 		'--follow-symlinks', '-s', action='store_true', dest='follow_symlinks',
-		help='By default, symlinks are copied as symlinks. If this flag is used,'
+		help='By default, symlinks are copied as symlinks. If this flag is used, '
 		'the contents of symlinked files will be copied.'
 	)
 	parser.add_argument(
 		'--include', '-i', action='extend', nargs='*', metavar='FILE', default=[],
-		help='Files or groups to add to the profile. Paths must be either absolute or relative'
-		'to the home directory. Group names must start with a colon (:). Available groups and'
+		help='Files or groups to add to the profile. Paths must be either absolute or relative '
+		'to the home directory. Group names must start with a colon (:). Available groups and '
 		'those loaded by default can be checked using `konfsave groups`.'
 	)
 	parser.add_argument(
 		'--exclude', '-e', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files or groups to exclude from the profile; that is, they will not be copied, '
-		'but if the files already exist in the profile, they will not be deleted.'
+		'but if the files already exist in the profile, they will not be deleted. '
 		'The format is the same as for --include. '
 	)
 	args = parser.parse_args(argv)
 	if args.profile:
 		profiles.validate_profile_name(args.profile)
 	if args.profile \
-		and (constants.PROFILE_HOME / args.profile).exists() \
+		and (config.profile_home / args.profile).exists() \
 		and (current := profiles.profile_info()) \
 		and current['name'] != args.profile:
 			if input(
@@ -259,8 +259,8 @@ def action_load(argv):
 	)
 	parser.add_argument(
 		'--overwrite',
-		help='By default, loading will fail if no profile is active (i.e. the current configuration'
-		'is not saved). Otherwise, the user will be asked for confirmation.'
+		help='By default, loading will fail if no profile is active (i.e. the current configuration '
+		'is not saved). Otherwise, the user will be asked for confirmation. '
 		'Using --overwrite will bypass both of these checks.'
 	)
 	parser.add_argument(
@@ -270,7 +270,7 @@ def action_load(argv):
 	parser.add_argument(
 		'--include', '-i', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files or groups to load from the profile in addition to those loaded by default. '
-		'Paths must point to their final destination and be either absolute'
+		'Paths must point to their final destination and be either absolute '
 		'or relative to the home directory. '
 		'Files that are loaded by default can be checked using `konfsave list-files`. '
 		'Group names must start with a colon (:). '
@@ -312,7 +312,7 @@ def action_change(argv):
 		'profile', nargs='?',
 		help='Profile to change. If not specified, the current profile will be used. '
 		'Note that this will change the profile\'s saved attributes as well; '
-		'if you\'d like to store new attributes as a separate profile,'
+		'if you\'d like to store new attributes as a separate profile, '
 		'save the configuration under a new name first.'
 	)
 	parser.add_argument(
@@ -363,7 +363,7 @@ def action_archive(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave archive', description='Export/archive a profile to share or import later.',
 		# The default usage puts "profile" at the end
-		usage='konfsave archive [-h] [profile] [--destination PATH] [--overwrite]'
+		usage='konfsave archive [-h] [profile] [--destination PATH] [--overwrite] '
 		'[--compresslevel LEVEL] [--compression {store,lzma,deflate,bzip2}]'
 	)
 	parser.add_argument(
@@ -376,7 +376,7 @@ def action_archive(argv):
 	)
 	parser.add_argument(
 		'--overwrite', '-o', action='store_true',
-		help='Unless this option is specified, if the resulting file'
+		help='Unless this option is specified, if the resulting file '
 		'already exists, archiving will fail.'
 	)
 	parser.add_argument(
@@ -424,13 +424,13 @@ def action_unarchive(argv):
 		help='Path to the archive to extract from.'
 	)
 	parser.add_argument(
-		'--name', '-n', help='Extract to a specified profile name'
+		'--name', '-n', help='Extract to a specified profile name '
 		'(by default, it\'s the same as the archived profile).'
 	)
 	parser.add_argument(
 		'--overwrite', '-o', action='store_true',
-		help='By default, if the destination profile already exists,'
-		'the user will be asked for confirmation.'
+		help='By default, if the destination profile already exists, '
+		'the user will be asked for confirmation. '
 		'Using this option will silently overwrite such profiles instead.'
 	)
 	args = parser.parse_args(argv)

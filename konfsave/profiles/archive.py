@@ -5,7 +5,7 @@ import shutil
 import json
 from pathlib import Path
 
-from konfsave import constants
+from konfsave import config
 from konfsave import profiles
 
 
@@ -23,10 +23,10 @@ def archive_profile(profile, destination: Path = None, overwrite=False, compress
 	info = profiles.profile_info(profile)
 	if info is None:
 		raise RuntimeError(f'The directory {profile_dir} is not a valid Konfsave profile.')
-	profile_dir = constants.PROFILE_HOME / profile
-	destination = destination or (constants.ARCHIVE_DIRECTORY / (info['name'] + '.konfsave.zip'))
+	profile_dir = config.profile_home / profile
+	destination = destination or (config.archive_directory / (info['name'] + '.konfsave.zip'))
 	with zipfile.ZipFile(destination, mode=open_mode, compression=compression, compresslevel=compresslevel) as zipf:
-		print(f'Archiving "{profile}" into {destination}...')
+		print(f'Archiving "{profile}" into {destination}')
 		for source in profile_dir.glob('**/*'):
 			zipf.write(source, arcname=source.relative_to(profile_dir))
 	print('Archiving finished')
@@ -49,11 +49,11 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 	If the original archive has no information file and ``new_name`` is unspecified, ValueError will be raised.
 	"""
 	with zipfile.ZipFile(source) as zipf:
-		with zipf.open(constants.PROFILE_INFO_FILENAME) as infof:
+		with zipf.open(config.profile_info_filename) as infof:
 			info = profiles.parse_profile_info(infof, convert_values=False)
 			if info is None:
 				profiles.logger.warning(
-					f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.'
+					f'The archive {source} has a malformed {config.profile_info_filename}.'
 				)
 				if new_name is None:
 					raise ValueError(
@@ -74,7 +74,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		) != 'y':
 			print('Unarchiving aborted.')
 			return True
-		destination = constants.PROFILE_HOME / info['name']
+		destination = config.profile_home / info['name']
 		backup = None
 		if destination.exists() and not overwrite:
 			if confirm:
@@ -98,9 +98,9 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 		try:
 			zipf.extractall(
 				destination,
-				members=(p for p in zipf.namelist() if p != constants.PROFILE_INFO_FILENAME)
+				members=(p for p in zipf.namelist() if p != config.profile_info_filename)
 			)
-			with open(destination / constants.PROFILE_INFO_FILENAME, 'w') as f:
+			with open(destination / config.profile_info_filename, 'w') as f:
 				f.write(json.dumps(info))  # Write only after JSON serialization is successful
 		except Exception as e:
 			profiles.logger.exception(f'Unarchiving failed.\n')

@@ -118,7 +118,7 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 	"""
 	If the profile name is invalid, this function will print a warning and continue normally.
 	
-	When no argument is supplied, this will read ``constants.CURRENT_PROFILE_PATH``.
+	When no argument is supplied, this will read ``config.current_profile_path``.
 	The return value is ``None`` if the JSON file is missing or malformed.
 	"""
 	if use_cache and profile_name in _profile_info_cache:
@@ -127,8 +127,8 @@ def profile_info(profile_name=None, convert_values=True, use_cache=True) -> Opti
 		profiles.logger.warning(f'"f{profile_info}" is an invalid profile name\n')
 	try:
 		info = parse_profile_info(
-			(constants.PROFILE_HOME / profile_name / constants.PROFILE_INFO_FILENAME) \
-				if profile_name else constants.CURRENT_PROFILE_PATH, convert_values=convert_values
+			(config.profile_home / profile_name / config.profile_info_filename) \
+				if profile_name else config.current_profile_path, convert_values=convert_values
 		)
 		if use_cache and info:
 			_profile_info_cache[profile_name] = info

@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Union, Iterable
 
-from konfsave import constants
+from konfsave import config
 from konfsave import profiles
 
 
@@ -26,11 +26,11 @@ def change(results, profile=None):
 	new_info.update(results)
 	if profile == current:
 		# Also modify the profile info stored in the home directory
-		with open(constants.CURRENT_PROFILE_PATH, 'w') as f:
+		with open(config.current_profile_path, 'w') as f:
 			f.write(json.dumps(new_info))
 	if 'name' in results:
 		rename(profile, results['name'], change_info=False)  # Avoid writing to the file twice
-	with open(constants.PROFILE_HOME / new_info['name'] / constants.PROFILE_INFO_FILENAME, 'w') as f:
+	with open(config.profile_home / new_info['name'] / config.profile_info_filename, 'w') as f:
 		f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
 		
 		
@@ -40,16 +40,16 @@ def rename(source, result, change_info=True):
 	The current profile is not modified even if its name matches the source name.
 	"""
 	profiles.validate_profile_name(result)
-	if (constants.PROFILE_HOME / result).exists():
+	if (config.profile_home / result).exists():
 		raise FileExistsError(f'A profile named "{result}" is already saved.')
-	if not (constants.PROFILE_HOME / source).exists():
+	if not (config.profile_home / source).exists():
 		raise RuntimeError(f'The profile "{source}" doesn\'t exist.')
 	if change_info:
 		info = profiles.profile_info(source)
 		info.update({'name': result})
-		with open(constants.PROFILE_HOME / source / constants.PROFILE_INFO_FILENAME, 'w') as f:
+		with open(config.profile_home / source / config.profile_info_filename, 'w') as f:
 			f.write(json.dumps(new_info))  # Write only after JSON serialization is successful
-	(constants.PROFILE_HOME / source).rename(constants.PROFILE_HOME / result)
+	(config.profile_home / source).rename(config.profile_home / result)
 
 
 def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) -> bool:
@@ -78,7 +78,7 @@ def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) 
 		else:
 			profiles.logger.error('The list of profiles to delete is empty.')
 			return True
-	if not (constants.PROFILE_HOME / profile).exists():
+	if not (config.profile_home / profile).exists():
 		profiles.logger.error(f'The profile "{profile}" doesn\'t exist.')
 		return True
 	if confirm:
@@ -87,6 +87,6 @@ def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) 
 			print('Deleting aborted.')
 			return True
 	if clear_active and profile == current_profile():
-		constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
-	shutil.rmtree(constants.PROFILE_HOME / profile)
+		config.current_profile_path.unlink(missing_ok=True)
+	shutil.rmtree(config.profile_home / profile)
 	print(f'Deleted profile "{profile}"')

@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 
 from konfsave import constants
+from konfsave import config
 from konfsave import profiles
 
 
@@ -19,24 +20,24 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		* The source profile's info JSON is valid
 		* The user manually confirmed that they want to overwrite their configuration
 	"""
-	profile_root = constants.PROFILE_HOME / name
+	profile_root = config.profile_home / name
 	if overwrite_unsaved_configuration is not True:  # Be really sure that overwriting is intentional
 		# If the checks below fail, exit the function.
 		try:
 			current_info = profiles.profile_info()
-			assert (profile_root / constants.PROFILE_INFO_FILENAME).is_file()
+			assert (profile_root / config.profile_info_filename).is_file()
 			if current_info is None:
 				print(
 					'Warning: there is no active profile, and the current configuration is NOT SAVED.'
 				)
 			elif current_info['name'] != name:
 				print(
-					'Warning: you\'re loading a new profile. Konfsave cannot check if the currently'
+					'Warning: you\'re loading a new profile. Konfsave cannot check if the currently '
 					'active profile has been updated with current files.'
 				)
 			else:
 				print(
-					'Warning: you\'re overwriting the current profile with existing configuration.'
+					'Warning: you\'re overwriting the current profile with existing configuration. '
 					'Konfsave cannot check if the saved files are up-to-date.'
 				)
 			if input(
@@ -64,7 +65,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 		else:
 			subprocess.run(['kquitapp5', 'lattedock'])
 			restart_list.append('latte-dock')
-	constants.CURRENT_PROFILE_PATH.unlink(missing_ok=True)
+	config.current_profile_path.unlink(missing_ok=True)
 	for path in map(
 		lambda p: Path(p).relative_to(Path.home()),
 		profiles.paths_to_save(include, exclude)
@@ -74,7 +75,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 			profiles.copy_path(source, Path.home() / path)
 		else:
 			profiles.logger.info(f'The file {source} doesn\'t exist. Skipping\n')
-	shutil.copyfile(profile_root / constants.PROFILE_INFO_FILENAME, constants.CURRENT_PROFILE_PATH)
+	shutil.copyfile(profile_root / config.profile_info_filename, config.current_profile_path)
 	if restart:
 		subprocess.run(
 			['kstart5', 'plasmashell'],
