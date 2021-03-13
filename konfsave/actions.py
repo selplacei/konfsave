@@ -48,7 +48,7 @@ def parse_arguments(argv):
 	action = argv[1] if len(argv) > 1 else 'help'
 	try:
 		next(v for k, v in {
-            ('-h', '--help', 'help'): lambda *_: print(HELP_TEXT),
+			('-h', '--help', 'help'): lambda *_: print(HELP_TEXT),
 			('i', 'info', 'ls'): action_info,
 			('f', 'files'): action_list_files,
 			('g', 'groups'): action_list_groups,
@@ -63,7 +63,7 @@ def parse_arguments(argv):
 		logger.error(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
 	except KeyboardInterrupt:
 		print('Action cancelled.')
-	
+
 
 def action_info(argv):
 	parser = argparse.ArgumentParser(prog='konfsave info')
@@ -106,8 +106,8 @@ def action_info(argv):
 			print(f'Saved profiles:\n  {_N_T.join(saved_profiles)}')
 		else:
 			print('No profiles are saved.')
-	
-	
+
+
 def action_list_files(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave files',
@@ -159,7 +159,7 @@ def action_list_groups(argv):
 	if args.verbose >= 3:
 		for group in groups:
 			contents[group] = set(map(str, itertools.chain.from_iterable(
-					map(profiles.expand_path, profiles.resolve_group(group))
+				map(profiles.expand_path, profiles.resolve_group(group))
 			)))
 	elif args.verbose == 2:
 		for group in groups:
@@ -226,11 +226,11 @@ def action_save(argv):
 		and (config.profile_home / args.profile).exists() \
 		and (current := profiles.profile_info()) \
 		and current['name'] != args.profile:
-			if input(
-				f'Warning: the profile "{args.profile}" already exists.'
-				'Are you sure you want to overwrite it? [y/N]: '
-			) != 'y':
-				return
+		if input(
+			f'Warning: the profile "{args.profile}" already exists.'
+			'Are you sure you want to overwrite it? [y/N]: '
+		) != 'y':
+			return
 	include = set()
 	exclude = set()
 	for path in map(Path, args.exclude):
@@ -249,8 +249,8 @@ def action_save(argv):
 		exclude=exclude
 	)
 	print('Success')
-	
-	
+
+
 def action_load(argv):
 	parser = argparse.ArgumentParser(prog='konfsave load')
 	parser.add_argument(
@@ -302,8 +302,8 @@ def action_load(argv):
 	)
 	if success:
 		print('Success')
-	
-	
+
+
 def action_change(argv):
 	parser = argparse.ArgumentParser(
 		prog='konfsave change'

@@ -124,11 +124,12 @@ def load_config():
 					subvalues += list(definitions[subvalue])
 				except KeyError:
 					undefined_groups.add(subvalue)
-
-	logging.getLogger('konfsave').info(
-		f'The following groups are referenced in metagroup definitions, but are not defined: '
-		+ ', '.join(sorted(undefined_groups))
-	)
+	
+	if undefined_groups:
+		logging.getLogger('konfsave').info(
+			f'The following groups are referenced in metagroup definitions, but are not defined: '
+			+ ', '.join(sorted(undefined_groups))
+		)
 	
 	# Load defaults
 	save_list = list(map(lambda s: f':{s}', config['Defaults']['save-list'].split(',')))
