@@ -12,7 +12,6 @@ from typing import List
 from . import constants
 from . import config
 from . import profiles
-from . import archive
 
 _N_T = '\n  '  # Backslashes are not allowed in f-string expressions, so use a variable
 HELP_TEXT = '''Konfsave is a KDE config manager.
@@ -372,7 +371,7 @@ def action_archive(argv):
 		'bzip2': zipfile.ZIP_BZIP2
 	}[args.compression]
 	try:
-		archive.archive_profile(
+		profiles.archive_profile(
 			profile=args.profile,
 			overwrite=args.overwrite,
 			destination=args.destination,
@@ -410,7 +409,7 @@ def action_unarchive(argv):
 	args = parser.parse_args(argv)
 	if args.name:
 		profiles.validate_profile_name(args.name)
-	if not archive.unarchive_profile(
+	if not profiles.unarchive_profile(
 		source=args.file,
 		new_name=args.name,
 		overwrite=args.overwrite
