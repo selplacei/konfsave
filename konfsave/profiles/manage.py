@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 from typing import Union, Iterable
 
@@ -86,7 +87,7 @@ def delete(profile: Union[str, Iterable[str]], clear_active=True, confirm=True) 
 		if input('Are you sure you want to permanently delete it? [y/N]: ') != 'y':
 			print('Deleting aborted.')
 			return True
-	if clear_active and profile == current_profile():
+	if clear_active and profile == profiles.current_profile():
 		config.current_profile_path.unlink(missing_ok=True)
 	shutil.rmtree(config.profile_home / profile)
 	print(f'Deleted profile "{profile}"')

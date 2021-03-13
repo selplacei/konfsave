@@ -41,10 +41,7 @@ def load_config():
 	if not (constants.DATA_PATH / 'konfsave.ini').exists():
 		logging.getLogger('konfsave').warning('Config file missing, copying from default')
 		constants.DATA_PATH.mkdir(parents=True, exist_ok=True)
-		with (
-			open(constants.DATA_PATH / 'konfsave.ini', 'w') as f,
-			open(constants.DEFAULT_CONFIG_PATH) as d
-		):
+		with open(constants.DATA_PATH / 'konfsave.ini', 'w') as f, open(constants.DEFAULT_CONFIG_PATH) as d:
 			f.write(d.read())
 
 	# Load the config file

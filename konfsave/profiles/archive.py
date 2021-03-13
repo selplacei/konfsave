@@ -22,7 +22,7 @@ def archive_profile(profile, destination: Path = None, overwrite=False, compress
 	open_mode = 'w' if overwrite else 'x'
 	info = profiles.profile_info(profile)
 	if info is None:
-		raise RuntimeError(f'The directory {profile_dir} is not a valid Konfsave profile.')
+		raise RuntimeError(f'The directory {profile} is not a valid Konfsave profile.')
 	profile_dir = config.profile_home / profile
 	destination = destination or (config.archive_directory / (info['name'] + '.konfsave.zip'))
 	with zipfile.ZipFile(destination, mode=open_mode, compression=compression, compresslevel=compresslevel) as zipf:
@@ -102,7 +102,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 			)
 			with open(destination / config.profile_info_filename, 'w') as f:
 				f.write(json.dumps(info))  # Write only after JSON serialization is successful
-		except Exception as e:
+		except Exception:
 			profiles.logger.exception(f'Unarchiving failed.\n')
 			if backup:
 				profiles.logger.warning(
