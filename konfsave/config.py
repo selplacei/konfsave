@@ -92,7 +92,8 @@ def load_config():
 				metagroups[f':{metagroup}'] = definitions[f':{metagroup}']
 			except KeyError as e:
 				raise ValueError(
-					f'Attempted to redefine "{metagroup}" as a metagroup, but that group doesn\'t exist.'
+					f'Attempted to redefine "{metagroup}" as a metagroup, but that group doesn\'t exist. '
+					'Perhaps you forgot to include some files into it?'
 				) from e
 		else:
 			# Creation of a new metagroup

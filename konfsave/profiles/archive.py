@@ -53,11 +53,13 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 			info = profiles.parse_profile_info(infof, convert_values=False)
 			if info is None:
 				profiles.logger.warning(
-					f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.\n'
+					f'The archive {source} has a malformed {constants.PROFILE_INFO_FILENAME}.'
 				)
 				if new_name is None:
 					raise ValueError(
-						f'Could not infer the destination profile name for archive {source}.'
+						f'Could not infer the destination profile name for archive {source}. '
+						'The archive doesn\'t contain a valid info file, and no new name was '
+						'specified as a command line argument.'
 					)
 			if new_name:
 				info['name'] = new_name
@@ -87,7 +89,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 					backup = Path(str(destination) + '.bkp')
 					if backup.exists():
 						profiles.logger.warning(
-							f'Warning: the backup {backup} already exists. It will be overwritten.\n'
+							f'Warning: the backup {backup} already exists. It will be overwritten.'
 						)
 						shutil.rmtree(backup)  # Path.rename() fails if the directory is not empty
 					destination.rename(str(destination) + '.bkp')
@@ -104,7 +106,7 @@ def unarchive_profile(source: Path, new_name=None, overwrite=False, confirm=True
 			profiles.logger.exception(f'Unarchiving failed.\n')
 			if backup:
 				profiles.logger.warning(
-					f'The previous version of "{info["name"]}" was backed up to {destination}\n'
+					f'The previous version of "{info["name"]}" was backed up to {destination}'
 				)
 		else:
 			if backup:

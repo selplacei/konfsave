@@ -17,7 +17,10 @@ def change(results, profile=None):
 	current = profiles.current_profile()
 	if profile is None:
 		if current is None:
-			raise RuntimeError('Attempted to change the current profile, but no profile is active.')
+			raise RuntimeError(
+				'Attempted to change the current profile, but no profile is active. Try saving or '
+				'loading something first, or specifying which saved profile you\'d like to change.'
+			)
 		profile = current
 	new_info = profiles.profile_info(profile, convert_values=False).copy()
 	new_info.update(results)

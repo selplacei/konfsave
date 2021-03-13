@@ -84,6 +84,8 @@ def action_info(argv):
 			print(f'Supported groups: {info["groups"] or "(unspecified)"}')
 			if description := info['description']:
 				print(description)
+			else:
+				print('No description provided.')
 	else:
 		if current_profile := profiles.current_profile():
 			print(f'Current profile: {current_profile}')

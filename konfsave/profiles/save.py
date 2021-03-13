@@ -16,7 +16,10 @@ def save(name=None, include=None, exclude=None, follow_symlinks=False, destinati
 	info = profiles.profile_info(name, convert_values=False)
 	if name is None:
 		if info is None:
-			raise RuntimeError('Attempted to save the current profile, but no profile is active.')
+			raise RuntimeError(
+				'Attempted to save the current profile, but no profile is active. '
+				'Perhaps you\'re saving new configuration but forgot to specify a profile name?'
+			)
 		else:
 			name = info['name']
 	profile_dir = (constants.PROFILE_HOME / name) if destination is None else destination

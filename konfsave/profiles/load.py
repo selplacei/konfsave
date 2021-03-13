@@ -45,7 +45,7 @@ def load(name, include=None, exclude=None, overwrite_unsaved_configuration=False
 				print('Loading aborted.')
 				return True
 		except Exception as e:
-			profiles.logger.error('Refusing to overwrite unsaved configuration')
+			profiles.logger.error('Refusing to overwrite unsaved configuration due to an error')
 			raise
 	if restart:
 		restart_list = []
