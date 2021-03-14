@@ -28,6 +28,7 @@ a, archive          export a profile as a ZIP file
 u, unarchive        import an archived profile
 f, files            list files that save would copy
 g, groups           list default or available file groups
+v, vcs              manage profile sync and updates using git
 
 To see detailed usage instructions, run `konfsave <action> --help`.
 All flags starting with '--' can be abbreviated.
@@ -57,7 +58,8 @@ def parse_arguments(argv):
 			('c', 'change'): action_change,
 			('d', 'delete'): action_delete,
 			('a', 'archive'): action_archive,
-			('u', 'unarchive'): action_unarchive
+			('u', 'unarchive'): action_unarchive,
+			('v', 'vcs'): action_vcs
 		}.items() if action in k)(argv[2:])
 	except StopIteration:
 		logger.error(f'Unrecognized action: {action}\nTry \'konfsave help\' for more info.\n')
@@ -208,6 +210,11 @@ def action_save(argv):
 		'the contents of symlinked files will be copied.'
 	)
 	parser.add_argument(
+		'--no-commit', '-n', action='store_true', dest='commit',
+		help='By default, if the saved profile has VCS enabled, saving to it will create a new commit.'
+		'If this flag is used, files are added to the staging area without committing.'
+	)
+	parser.add_argument(
 		'--include', '-i', action='extend', nargs='*', metavar='FILE', default=[],
 		help='Files or groups to add to the profile. Paths must be either absolute or relative '
 		'to the home directory. Group names must start with a colon (:). Available groups and '
@@ -248,6 +255,7 @@ def action_save(argv):
 		include=include,
 		exclude=exclude
 	)
+	# TODO: make git commit if needed
 	print('Success')
 
 
@@ -442,3 +450,47 @@ def action_unarchive(argv):
 		overwrite=args.overwrite
 	):
 		print('Success')
+
+
+@constants.feature_required('GIT')
+def action_vcs(argv):
+	parser = argparse.ArgumentParser(
+		prog='konfsave vcs',
+		description='Manage profile sync and updates using Git.',
+		usage='konfsave vcs [-h] {status,init,push,pull} [--applicable | --every | profiles ...]'
+	)
+	parser.add_argument(
+		'action', choices=('enable', 'push', 'pull')
+	)
+	group = parser.add_mutually_exclusive_group()
+	group.add_argument(
+		'profiles', action='extend', nargs='*', default=[profiles.current_profile()],
+		help='List of specific profiles to act on'
+	)
+	group.add_argument(
+		'--applicable', '-a', action='store_const', const=':applicable:', dest='profiles',
+		help='Act on all saved profiles that have VCS enabled'
+	)
+	group.add_argument(
+		'--every', '-e', action='store_const', const=':every:', dest='profiles',
+		help='Act on all saved profiles, even if they don\'t have VCS enabled'
+	)
+	parser.add_argument(
+		'--force', '-f', action='store_true',
+		help='Push or pull forcefully, overwriting unsaved changes.'
+	)
+	args = parser.parse_args(argv)
+	if args.profiles == ':applicable:':
+		pass
+	elif args.profiles == ':every:':
+		pass
+	elif args.profiles:
+		profile_list = args.profiles
+	else:
+		profile_list = [profiles.current_profile()]
+		if profile_list[0] is None:
+			logger.error('No profile is active. Specify a name or activate a profile first.')
+			return
+	if args.action == 'enable':
+		for profile in profile_list:
+			profiles.enable_vcs(profile)

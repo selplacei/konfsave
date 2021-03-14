@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Optional, Set, Union, TextIO, Iterable
 
