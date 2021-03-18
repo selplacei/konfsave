@@ -10,9 +10,14 @@ from konfsave import config
 from konfsave import constants
 from konfsave import profiles
 
+# in addition to valid identifiers
+ADDITIONAL_PROFILE_NAME_CHARS = r'0123456789-+&()[]'
+
 
 def validate_profile_name(name, exit_if_invalid=True) -> bool:
-	valid = name.isidentifier()
+	valid = (''.join(
+        c for c in name if c not in ADDITIONAL_PROFILE_NAME_CHARS
+    )).isidentifier()
 	if (not valid) and exit_if_invalid:
 		profiles.logger.critical(f'The profile name "{name}" is invalid.')
 		sys.exit(1)
