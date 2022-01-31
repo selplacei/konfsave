@@ -1,10 +1,10 @@
 # Konfsave
 
-Konfsave is a config manager. That is, it allows you to save, back up, and easily switch between different (per-user) system configurations.
+Konfsave is a config manager. That is, it allows you to save, back up, and easily switch between different (per-user) system configurations (not just in terms of KDE).
 Each configuration is stored as a profile; the script allows you to save the current configuration as a named profile,
 and then load them by name. It's also possible to take these profiles somewhere else by exporting or importing them, or just copying their folder.
 
-By default, Konfsave manages your KDE configuration - specifically, its appearance and workspace settings. This can be easily changed in `config.ini`.
+By default, Konfsave manages your KDE configuration - specifically, its appearance and workspace settings. This can be easily changed in the config file.
 If you'd like to learn more about how to adjust the configuration, see the [wiki](https://github.com/selplacei/konfsave/wiki).
 You can also specify additional files to include or exclude once using command line options.
 
@@ -16,7 +16,7 @@ Python 3.8+ is required. On some systems, this means that you must use `python3`
 
 ## Installation & Usage
 
-The configuration file, `config.ini`, is stored in `$XDG_CONFIG_HOME/konfsave` (usually it's `~/.config/konfsave`).  
+The configuration file is stored in `$XDG_CONFIG_HOME/konfsave` (usually it's `~/.config/konfsave`).  
 Usage instructions can be viewed with `konfsave --help`.
 
 There are 2 installation options:
